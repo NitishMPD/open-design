@@ -48,6 +48,7 @@ export type ToolPackCliOptions = {
   removeSidecars?: boolean;
   requireVelaCli?: boolean;
   signed?: boolean;
+  skipWorkspaceBuild?: boolean;
   silent?: boolean;
   statusPollCount?: string | number;
   statusPollIntervalMs?: string | number;
