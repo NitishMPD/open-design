@@ -28,7 +28,6 @@ export type ToolPackAmrProfile = "prod" | "test" | "feature-test" | "local";
 export type ToolPackVelaWebUrls = Partial<Record<ToolPackAmrProfile, string>>;
 
 export type ToolPackCliOptions = {
-  appVersion?: string;
   artifactUrl?: string;
   cacheDir?: string;
   channel?: string;
@@ -51,8 +50,10 @@ export type ToolPackCliOptions = {
   removeProductUserData?: boolean;
   removeSidecars?: boolean;
   requireVelaCli?: boolean;
+  releaseVersion?: string;
   signed?: boolean;
   shell?: string;
+  shellVersion?: string;
   skipWorkspaceBuild?: boolean;
   silent?: boolean;
   statusPollCount?: string | number;
@@ -78,7 +79,6 @@ export type ToolPackRoots = {
 };
 
 export type ToolPackConfig = {
-  appVersion?: string;
   electronBuilderCliPath: string;
   electronDistPath: string;
   electronVersion: string;
@@ -93,10 +93,12 @@ export type ToolPackConfig = {
   removeProductUserData: boolean;
   removeSidecars: boolean;
   requireVelaCli: boolean;
+  releaseVersion?: string;
   roots: ToolPackRoots;
   silent: boolean;
   signed: boolean;
   shell: ToolPackShell;
+  shellVersion?: string;
   amrProfile?: ToolPackAmrProfile;
   telemetryRelayUrl?: string;
   /**
@@ -177,16 +179,16 @@ function resolveToolPackMacCompression(value: string | undefined): ToolPackMacCo
   throw new Error(`unsupported mac --mac-compression value: ${value}`);
 }
 
-function resolveToolPackAppVersion(value: string | undefined): string | undefined {
+function resolveToolPackVersion(value: string | undefined, flag: "--release-version" | "--shell-version"): string | undefined {
   if (value == null) return undefined;
   const normalized = value.trim();
-  if (normalized.length === 0) throw new Error("--app-version must not be empty");
-  if (/\s/.test(normalized)) throw new Error(`--app-version must not contain whitespace: ${value}`);
+  if (normalized.length === 0) throw new Error(`${flag} must not be empty`);
+  if (/\s/.test(normalized)) throw new Error(`${flag} must not contain whitespace: ${value}`);
   return normalized;
 }
 
-function defaultNamespaceForAppVersion(platform: ToolPackPlatform, appVersion: string | undefined): string {
-  const channel = releaseChannelFromVersion(appVersion);
+function defaultNamespaceForReleaseVersion(platform: ToolPackPlatform, releaseVersion: string | undefined): string {
+  const channel = releaseChannelFromVersion(releaseVersion);
   if (channel == null) return SIDECAR_DEFAULTS.namespace;
 
   return releaseNamespace(channel, platform);
@@ -376,12 +378,13 @@ export function resolveToolPackConfig(
   platform: ToolPackPlatform,
   options: ToolPackCliOptions = {},
 ): ToolPackConfig {
-  const appVersion = resolveToolPackAppVersion(options.appVersion);
+  const releaseVersion = resolveToolPackVersion(options.releaseVersion, "--release-version");
+  const shellVersion = resolveToolPackVersion(options.shellVersion ?? releaseVersion, "--shell-version");
   const shell = resolveToolPackShell(options.shell);
   const namespace = resolveNamespace({
     contract: OPEN_DESIGN_SIDECAR_CONTRACT,
     env: process.env,
-    namespace: options.namespace ?? defaultNamespaceForAppVersion(platform, appVersion),
+    namespace: options.namespace ?? defaultNamespaceForReleaseVersion(platform, releaseVersion),
   });
   const defaultToolPackRoot = join(WORKSPACE_ROOT, ".tmp", "tools-pack");
   const toolPackRoot = resolve(options.dir ?? defaultToolPackRoot);
@@ -392,7 +395,6 @@ export function resolveToolPackConfig(
   const runtimeNamespaceBaseRoot = join(toolPackRoot, "runtime", platform, "namespaces");
 
   return {
-    appVersion,
     electronBuilderCliPath: resolveElectronBuilderCliPath(),
     electronDistPath: resolveElectronDistPath(WORKSPACE_ROOT, shell),
     electronVersion: resolveElectronVersion(WORKSPACE_ROOT, shell),
@@ -421,9 +423,11 @@ export function resolveToolPackConfig(
     removeProductUserData: options.removeProductUserData === true,
     removeSidecars: options.removeSidecars === true,
     requireVelaCli: options.requireVelaCli === true,
+    releaseVersion,
     silent: options.silent !== false,
     signed: options.signed === true,
     shell,
+    shellVersion,
     amrProfile: resolveToolPackAmrProfile(process.env.OPEN_DESIGN_AMR_PROFILE),
     telemetryRelayUrl: resolveToolPackTelemetryRelayUrl(process.env.OPEN_DESIGN_TELEMETRY_RELAY_URL),
     updateMetadataUrl: resolveToolPackUpdateMetadataUrl(process.env.OD_UPDATE_METADATA_URL),
