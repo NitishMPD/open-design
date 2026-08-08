@@ -1199,6 +1199,9 @@ importers:
 
   tools/serve:
     dependencies:
+      '@open-design/closure-proto':
+        specifier: workspace:*
+        version: link:../../packages/closure-proto
       '@open-design/release':
         specifier: workspace:*
         version: link:../../packages/release
