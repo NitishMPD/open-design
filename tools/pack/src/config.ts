@@ -29,6 +29,7 @@ export type ToolPackVelaWebUrls = Partial<Record<ToolPackAmrProfile, string>>;
 
 export type ToolPackCliOptions = {
   artifactUrl?: string;
+  blobOrigin?: string;
   cacheDir?: string;
   channel?: string;
   dir?: string;
