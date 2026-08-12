@@ -160,7 +160,7 @@ describe("seedPackagedAppConfig", () => {
 });
 
 describe("copyResourceTree", () => {
-  it("does not embed the build machine Node launcher into mac resources", async () => {
+  it("seeds the Shell with the official Node that tools-pack actually used", async () => {
     const root = await mkdtemp(join(tmpdir(), "open-design-tools-pack-mac-"));
     try {
       const config = makeConfig(root);
@@ -197,7 +197,7 @@ describe("copyResourceTree", () => {
 
       await copyResourceTree(config, paths);
 
-      expect(await pathExists(join(paths.resourceRoot, "bin", "node"))).toBe(false);
+      expect(await pathExists(join(paths.resourceRoot, "bin", "node"))).toBe(true);
       const dshRuntimeResourceRoot = join(paths.resourceRoot, "agent-runtimes", "deepseek-harness");
       await expect(readFile(join(dshRuntimeResourceRoot, "manifest.json"), "utf8")).resolves.toContain(
         '"packageName": "@open-design/dsh-runtime"',
@@ -256,7 +256,7 @@ describe("copyMacPrebundleRuntimeDependencies", () => {
 });
 
 describe("renderMacPackagedConfig", () => {
-  it("omits nodeCommandRelative so packaged mac sidecars use Electron as Node", async () => {
+  it("omits nodeCommandRelative so packaged mac uses the fossil Shell Node path", async () => {
     const root = await mkdtemp(join(tmpdir(), "open-design-tools-pack-mac-"));
     try {
       const config = makeConfig(root);
