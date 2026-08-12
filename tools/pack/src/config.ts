@@ -28,6 +28,7 @@ export type ToolPackAmrProfile = "prod" | "test" | "feature-test" | "local";
 export type ToolPackVelaWebUrls = Partial<Record<ToolPackAmrProfile, string>>;
 
 export type ToolPackCliOptions = {
+  allowDaemonFallback?: boolean;
   artifactUrl?: string;
   blobOrigin?: string;
   cacheDir?: string;
@@ -53,6 +54,7 @@ export type ToolPackCliOptions = {
   removeSidecars?: boolean;
   requireVelaCli?: boolean;
   releaseVersion?: string;
+  runtimeBaseRoot?: string;
   signed?: boolean;
   shell?: string;
   shellVersion?: string;
@@ -62,6 +64,7 @@ export type ToolPackCliOptions = {
   standaloneSeedDir?: string;
   statusPollCount?: string | number;
   statusPollIntervalMs?: string | number;
+  timeoutMs?: string | number;
   to?: string;
   updateAction?: string;
   version?: string;
