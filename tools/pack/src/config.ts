@@ -6,7 +6,7 @@ import path from "node:path";
 import {
   OPEN_DESIGN_SIDECAR_CONTRACT,
   SIDECAR_DEFAULTS,
-} from "@open-design/sidecar-proto";
+} from "@open-design/sidecar/protocol";
 import { resolveNamespace } from "@open-design/sidecar";
 import { releaseChannelFromVersion, releaseNamespace } from "@open-design/release";
 
@@ -39,6 +39,7 @@ export type ToolPackCliOptions = {
   expr?: string;
   includeManagedProcesses?: boolean;
   json?: boolean;
+  launcherVersion?: string;
   macCompression?: string;
   minShellVersion?: string;
   notarize?: boolean;
@@ -100,6 +101,8 @@ export type ToolPackConfig = {
   removeProductUserData: boolean;
   removeSidecars: boolean;
   requireVelaCli: boolean;
+  /** Version of the packaged launcher payload; defaults to the bound release. */
+  launcherVersion?: string;
   releaseVersion?: string;
   roots: ToolPackRoots;
   silent: boolean;
@@ -187,7 +190,10 @@ function resolveToolPackMacCompression(value: string | undefined): ToolPackMacCo
   throw new Error(`unsupported mac --mac-compression value: ${value}`);
 }
 
-function resolveToolPackVersion(value: string | undefined, flag: "--release-version" | "--shell-version"): string | undefined {
+function resolveToolPackVersion(
+  value: string | undefined,
+  flag: "--launcher-version" | "--release-version" | "--shell-version",
+): string | undefined {
   if (value == null) return undefined;
   const normalized = value.trim();
   if (normalized.length === 0) throw new Error(`${flag} must not be empty`);
@@ -388,6 +394,10 @@ export function resolveToolPackConfig(
 ): ToolPackConfig {
   const releaseVersion = resolveToolPackVersion(options.releaseVersion, "--release-version");
   const shellVersion = resolveToolPackVersion(options.shellVersion ?? releaseVersion, "--shell-version");
+  const launcherVersion = resolveToolPackVersion(
+    options.launcherVersion ?? releaseVersion ?? shellVersion,
+    "--launcher-version",
+  );
   const shell = resolveToolPackShell(options.shell);
   const namespace = resolveNamespace({
     contract: OPEN_DESIGN_SIDECAR_CONTRACT,
@@ -431,6 +441,7 @@ export function resolveToolPackConfig(
     removeProductUserData: options.removeProductUserData === true,
     removeSidecars: options.removeSidecars === true,
     requireVelaCli: options.requireVelaCli === true,
+    launcherVersion,
     releaseVersion,
     silent: options.silent !== false,
     signed: options.signed === true,
