@@ -1,4 +1,5 @@
 import { execFile } from "node:child_process";
+import { existsSync } from "node:fs";
 import { chmod, mkdir, mkdtemp, readFile, readdir, rm, writeFile } from "node:fs/promises";
 import { createServer, type IncomingMessage, type ServerResponse } from "node:http";
 import { createServer as createHttpsServer } from "node:https";
@@ -19,6 +20,10 @@ import {
 } from "../lib/playwright/suites.ts";
 
 const execFileAsync = promisify(execFile);
+const launchEnv = { ...process.env };
+const launchPath = launchEnv.PATH ?? launchEnv.Path ?? "";
+const nodeBinDir = dirname(process.execPath);
+const jqBin = process.platform !== "win32" && existsSync("/usr/bin/jq") ? "/usr/bin/jq" : "jq";
 const e2eRoot = dirname(dirname(fileURLToPath(import.meta.url)));
 const workspaceRoot = dirname(e2eRoot);
 const ciWorkflowPath = join(workspaceRoot, ".github", "workflows", "ci.yml");
@@ -35,6 +40,13 @@ const playwrightConfigPath = join(e2eRoot, "playwright.config.ts");
 const commentWorkflowPath = join(workspaceRoot, ".github", "workflows", "comment.atom.yml");
 const autofixWorkflowPath = join(workspaceRoot, ".github", "workflows", "autofix.atom.yml");
 const reportWorkflowPath = join(workspaceRoot, ".github", "workflows", "report.atom.yml");
+const contributorMaintainerCheckWorkflowPath = join(
+  workspaceRoot,
+  ".github",
+  "workflows",
+  "contributor-maintainer-check.yml",
+);
+const prAuthorInactivityWorkflowPath = join(workspaceRoot, ".github", "workflows", "pr-author-inactivity.yml");
 const rerunWorkflowPath = join(workspaceRoot, ".github", "workflows", "rerun.atom.yml");
 const rerunInfraCancelScriptPath = join(workspaceRoot, ".github", "scripts", "rerun_infra_cancel.py");
 const bakePluginPreviewsWorkflowPath = join(workspaceRoot, ".github", "workflows", "bake-plugin-previews.yml");
@@ -58,6 +70,7 @@ const bakePreviewsReleaseWorkflowPath = join(
 const finalizeReleaseWorkflowPath = join(workspaceRoot, ".github", "workflows", "finalize-release.yml");
 const handoffScriptPath = join(workspaceRoot, ".github", "scripts", "handoff.py");
 const releaseBetaWorkflowPath = join(workspaceRoot, ".github", "workflows", "release-beta.yml");
+const distributionBetaWorkflowPath = join(workspaceRoot, ".github", "workflows", "distribution-beta.yml");
 const packagedMacSpecPath = join(e2eRoot, "specs", "mac.spec.ts");
 const dailyBetaRecoveryScriptPath = join(
   workspaceRoot,
@@ -68,6 +81,8 @@ const dailyBetaRecoveryScriptPath = join(
 );
 const releasePreviewWorkflowPath = join(workspaceRoot, ".github", "workflows", "release-preview.yml");
 const releasePrereleaseWorkflowPath = join(workspaceRoot, ".github", "workflows", "release-prerelease.yml");
+const distributionPreviewWorkflowPath = join(workspaceRoot, ".github", "workflows", "distribution-preview.yml");
+const distributionPrereleaseWorkflowPath = join(workspaceRoot, ".github", "workflows", "distribution-prerelease.yml");
 const mainPrereleaseWinSmokeWorkflowPath = join(
   workspaceRoot,
   ".github",
@@ -75,6 +90,7 @@ const mainPrereleaseWinSmokeWorkflowPath = join(
   "main-prerelease-win-smoke.yml",
 );
 const releaseStableWorkflowPath = join(workspaceRoot, ".github", "workflows", "release-stable.yml");
+const distributionStableWorkflowPath = join(workspaceRoot, ".github", "workflows", "distribution-stable.yml");
 const releaseStableNotesScriptPath = join(workspaceRoot, ".github", "scripts", "release", "github", "stable-notes.sh");
 const releasePreviewScriptPath = join(workspaceRoot, "tools", "release", "src", "metadata", "prepare-preview.ts");
 const releaseStableScriptPath = join(workspaceRoot, "tools", "release", "src", "metadata", "prepare-stable.ts");
@@ -120,6 +136,27 @@ const releaseLatestPublicationScriptPath = join(
   "storage",
   "latest-publication.ts",
 );
+
+async function readReleaseWorkflow(ritualPath: string, distributionPath: string): Promise<string> {
+  const [ritual, distribution] = await Promise.all([
+    readFile(ritualPath, "utf8"),
+    readFile(distributionPath, "utf8"),
+  ]);
+  return `${ritual}\n${distribution}`;
+}
+
+function workflowFixtureEnv(
+  overrides: Record<string, string>,
+  executableDir?: string,
+): NodeJS.ProcessEnv {
+  const childPath = [executableDir, nodeBinDir, launchPath].filter(Boolean).join(delimiter);
+  return {
+    ...launchEnv,
+    ...overrides,
+    Path: childPath,
+    PATH: childPath,
+  };
+}
 
 function sectionBetween(content: string, start: string, end: string): string {
   const startIndex = content.indexOf(start);
@@ -182,7 +219,7 @@ function extractValidateGateJqPrograms(workflow: string): { failures: string; re
   const needsCheck = sectionBetween(
     validate,
     "      - name: Check workspace validation jobs",
-    "      - name: Block merge while the needs-validation label is present",
+    "      - name: Block merge while a merge-blocking label is present",
   );
   const programs = [...needsCheck.matchAll(/jq -r '([\s\S]*?)'/g)].map((match) => match[1] ?? "");
   expect(programs).toHaveLength(2);
@@ -191,7 +228,7 @@ function extractValidateGateJqPrograms(workflow: string): { failures: string; re
 
 function runValidateGateJq(program: string, needs: unknown): Promise<string> {
   return new Promise((resolve, reject) => {
-    const child = execFile("jq", ["-r", program], { encoding: "utf8" }, (error, stdout, stderr) => {
+    const child = execFile(jqBin, ["-r", program], { encoding: "utf8" }, (error, stdout, stderr) => {
       if (error) {
         reject(Object.assign(error, { stdout, stderr }));
         return;
@@ -268,19 +305,15 @@ if (process.argv.includes("--jq")) {
   await writeFile(ghCmdPath, `@echo off\r\n"${process.execPath}" "${ghPath}" %*\r\n`);
 
   try {
-    const fakePath = `${tempDir}${delimiter}${process.env.PATH ?? ""}`;
     const { stdout } = await execFileAsync(process.execPath, ["--experimental-strip-types", scopesScriptPath, "print"], {
       cwd: workspaceRoot,
-      env: {
-        ...process.env,
+      env: workflowFixtureEnv({
         GITHUB_EVENT_NAME: eventName,
         GITHUB_EVENT_PATH: eventPath,
         GITHUB_REPOSITORY: "nexu-io/open-design",
         GITHUB_SHA: "0123456789abcdef0123456789abcdef01234567",
         OPEN_DESIGN_GH_NODE_SCRIPT: ghPath,
-        Path: fakePath,
-        PATH: fakePath,
-      },
+      }, tempDir),
     });
     return JSON.parse(stdout) as Record<string, unknown>;
   } finally {
@@ -545,7 +578,7 @@ describe("packaged smoke workflow", () => {
     expect(ciWorkflow).toContain("<!-- merge-queue-needs-validation -->");
     expect(ciWorkflow).toContain("emit_ejection_notice");
     expect(ciWorkflow).toContain(
-      "if: ${{ failure() && steps.needs_validation_gate.outputs.comment_created == 'true' }}",
+      "if: ${{ failure() && steps.merge_blocking_label_gate.outputs.comment_created == 'true' }}",
     );
 
     // Consumer: a merge_group run's head_sha is the queue's synthetic merge commit, so the atom
@@ -554,6 +587,35 @@ describe("packaged smoke workflow", () => {
     expect(commentWorkflow).toContain('"$RUN_EVENT" = "merge_group"');
     expect(commentWorkflow).toContain('"$artifact_run_id" != "$RUN_ID"');
     expect(commentWorkflow).toContain('[ "$RUN_EVENT" != "merge_group" ] && [ "$current_base" != "$base_sha" ]');
+  });
+
+  it("[P1] routes configured contributors into an independent maintainer merge block", async () => {
+    const [routingWorkflow, ciWorkflow, inactivityWorkflow] = await Promise.all([
+      readFile(contributorMaintainerCheckWorkflowPath, "utf8"),
+      readFile(ciWorkflowPath, "utf8"),
+      readFile(prAuthorInactivityWorkflowPath, "utf8"),
+    ]);
+    const trigger = sectionBetween(routingWorkflow, "on:", "\npermissions:");
+
+    expect(trigger).toContain("pull_request_target:");
+    expect(trigger).toContain("types: [opened, reopened, synchronize]");
+    expect(trigger).not.toContain("unlabeled");
+    expect(routingWorkflow).toContain("permissions:\n  issues: write");
+    expect(routingWorkflow).toContain("actions/github-script@v8");
+    expect(routingWorkflow).toContain("secrets.NEEDS_MAINTAINER_CHECK_USER_IDS");
+    expect(routingWorkflow).toContain("rawIds ? JSON.parse(rawIds) : []");
+    expect(routingWorkflow).toContain("Number.isSafeInteger(id) && id > 0");
+    expect(routingWorkflow).toContain("context.payload.pull_request?.user?.id");
+    expect(routingWorkflow).toContain("configuredIds.includes(authorId)");
+    expect(routingWorkflow).toContain("github.rest.issues.addLabels");
+    expect(routingWorkflow).toContain("labels: ['needs-maintainer-check']");
+    expect(routingWorkflow).not.toContain("actions/checkout");
+
+    expect(ciWorkflow).toContain("Block merge while a merge-blocking label is present");
+    expect(ciWorkflow).toContain("grep -qx 'needs-maintainer-check'");
+    expect(ciWorkflow).toContain("<!-- merge-queue-needs-maintainer-check -->");
+    expect(ciWorkflow).toContain("needs-maintainer-check-pr-$pr");
+    expect(inactivityWorkflow).toContain("'needs-maintainer-check'");
   });
 
   it("[P2] gates the backport auto-merge follow-up as a trusted workflow_run consumer", async () => {
@@ -727,16 +789,14 @@ process.stdin.on("end", () => {
       try {
         await execFileAsync("bash", ["-c", script], {
           cwd: dir,
-          env: {
-            ...process.env,
+          env: workflowFixtureEnv({
             EVENT: args.event,
             INPUT_TAG: args.inputTag ?? "",
             GITHUB_OUTPUT: outputPath,
-            PATH: `${dir}${delimiter}${process.env.PATH ?? ""}`,
             FAKE_GH_LOG: ghLogPath,
             FAKE_GH_STATE: args.state ?? "",
             FAKE_GH_EXIT: args.ghExit ? "1" : "0",
-          },
+          }, dir),
         });
         const [rawOutput, rawGhArgs] = await Promise.all([
           readFile(outputPath, "utf8").catch(() => ""),
@@ -820,7 +880,7 @@ process.stdin.on("end", () => {
 
       await execFileAsync("bash", ["-c", script], {
         cwd: dir,
-        env: { ...process.env, NEXT: "0.12.1", GITHUB_OUTPUT: outputPath },
+        env: workflowFixtureEnv({ NEXT: "0.12.1", GITHUB_OUTPUT: outputPath }),
       });
 
       await expect(readFile(outputPath, "utf8")).resolves.toContain("changed=true");
@@ -859,7 +919,7 @@ process.stdin.on("end", () => {
 
       await execFileAsync("bash", ["-c", script], {
         cwd: dir,
-        env: { ...process.env, NEXT: "0.12.1", GITHUB_OUTPUT: outputPath },
+        env: workflowFixtureEnv({ NEXT: "0.12.1", GITHUB_OUTPUT: outputPath }),
       });
 
       await expect(readFile(outputPath, "utf8")).resolves.toContain("changed=false");
@@ -1393,9 +1453,9 @@ process.stdin.on("end", () => {
     },
     {
       name: "Functional E2E commit pin",
-      workflowPath: releasePrereleaseWorkflowPath,
+      workflowPath: distributionPrereleaseWorkflowPath,
       jobStart: "  functional_e2e:",
-      jobEnd: "  daemon_unit_tests:",
+      jobEnd: "  e2e_vitest:",
       marker: "ref: ${{ needs.metadata.outputs.commit }}",
     },
   ])("[P1] keeps $name bounded to its owning job", async ({
@@ -1503,17 +1563,23 @@ process.stdin.on("end", () => {
     expect(uiFull).toContain("needs: [validate_inputs, p0_runners]");
   });
 
-  it("[P1] gates prerelease packaging on full Functional E2E at the resolved build commit", async () => {
+  it("[P1] gates prerelease packaging on P0 Functional E2E at the resolved build commit", async () => {
     const [prerelease, functionalE2e] = await Promise.all([
-      readFile(releasePrereleaseWorkflowPath, "utf8"),
+      readReleaseWorkflow(releasePrereleaseWorkflowPath, distributionPrereleaseWorkflowPath),
       readFile(uiExtendedMainWorkflowPath, "utf8"),
     ]);
 
-    const gate = sectionBetween(prerelease, "  functional_e2e:", "  daemon_unit_tests:");
+    const gate = sectionBetween(prerelease, "  functional_e2e:", "  e2e_vitest:");
     expect(gate).toContain("needs: metadata");
     expect(gate).toContain("uses: ./.github/workflows/ui-extended-main.yml");
     expect(gate).toContain("ref: ${{ needs.metadata.outputs.commit }}");
-    expect(gate).toContain("suite: full");
+    expect(gate).toContain("suite: p0");
+
+    const e2eVitestGate = sectionBetween(prerelease, "  e2e_vitest:", "  daemon_unit_tests:");
+    expect(e2eVitestGate).toContain("needs: metadata");
+    expect(e2eVitestGate).toContain("ref: ${{ needs.metadata.outputs.commit }}");
+    expect(e2eVitestGate).toContain("playwright install --with-deps chromium");
+    expect(e2eVitestGate).toContain("pnpm --filter @open-design/e2e test");
 
     const daemonGate = sectionBetween(prerelease, "  daemon_unit_tests:", "  verify:");
     expect(daemonGate).toContain("shard: [1, 2, 3, 4]");
@@ -1530,14 +1596,16 @@ process.stdin.on("end", () => {
       ["  build_win:", "  publish:"],
     ] as const) {
       const buildJob = sectionBetween(prerelease, start, end);
-      expect(buildJob).toContain("needs: [metadata, functional_e2e, daemon_unit_tests, verify]");
+      expect(buildJob).toContain("needs: [metadata, functional_e2e, e2e_vitest, daemon_unit_tests, verify]");
       expect(buildJob).toContain("ref: ${{ needs.metadata.outputs.commit }}");
     }
 
     const publish = sectionBetween(prerelease, "  publish:", "  cleanup_partial_release_assets:");
     expect(publish).toContain("- functional_e2e");
+    expect(publish).toContain("- e2e_vitest");
     expect(publish).toContain("- daemon_unit_tests");
     expect(publish).toContain("needs.functional_e2e.result == 'success'");
+    expect(publish).toContain("needs.e2e_vitest.result == 'success'");
     expect(publish).toContain("needs.daemon_unit_tests.result == 'success'");
     expect(publish).toContain("ref: ${{ needs.metadata.outputs.commit }}");
   });
@@ -1719,11 +1787,11 @@ process.stdin.on("end", () => {
 
   it("[P2] keeps release namespaces aligned with release channels", async () => {
     const [releaseStableWorkflow, releaseStableScript, releasePreviewWorkflow, releasePrereleaseWorkflow, releaseBetaWorkflow] = await Promise.all([
-      readFile(releaseStableWorkflowPath, "utf8"),
+      readReleaseWorkflow(releaseStableWorkflowPath, distributionStableWorkflowPath),
       readFile(releaseStableScriptPath, "utf8"),
-      readFile(releasePreviewWorkflowPath, "utf8"),
-      readFile(releasePrereleaseWorkflowPath, "utf8"),
-      readFile(releaseBetaWorkflowPath, "utf8"),
+      readReleaseWorkflow(releasePreviewWorkflowPath, distributionPreviewWorkflowPath),
+      readReleaseWorkflow(releasePrereleaseWorkflowPath, distributionPrereleaseWorkflowPath),
+      readReleaseWorkflow(releaseBetaWorkflowPath, distributionBetaWorkflowPath),
     ]);
 
     expect(releaseStableScript).toContain('mac: releaseNamespace(channel, "mac"),');
@@ -1869,8 +1937,8 @@ process.stdin.on("end", () => {
     // so the per-platform manifests and the final metadata.json carry the built commit and
     // stay mutually consistent (publish-metadata rejects a manifest whose commit disagrees).
     const [prereleaseWorkflow, betaWorkflow] = await Promise.all([
-      readFile(releasePrereleaseWorkflowPath, "utf8"),
-      readFile(releaseBetaWorkflowPath, "utf8"),
+      readReleaseWorkflow(releasePrereleaseWorkflowPath, distributionPrereleaseWorkflowPath),
+      readReleaseWorkflow(releaseBetaWorkflowPath, distributionBetaWorkflowPath),
     ]);
 
     const releaseCommitEnv = "RELEASE_COMMIT: ${{ needs.metadata.outputs.commit }}";
@@ -1890,8 +1958,8 @@ process.stdin.on("end", () => {
 
   it("[P2] keeps counted release workflow calls on a consistent ref and output contract", async () => {
     const [previewWorkflow, prereleaseWorkflow, previewScript] = await Promise.all([
-      readFile(releasePreviewWorkflowPath, "utf8"),
-      readFile(releasePrereleaseWorkflowPath, "utf8"),
+      readReleaseWorkflow(releasePreviewWorkflowPath, distributionPreviewWorkflowPath),
+      readReleaseWorkflow(releasePrereleaseWorkflowPath, distributionPrereleaseWorkflowPath),
       readFile(releasePreviewScriptPath, "utf8"),
     ]);
 
@@ -1915,7 +1983,7 @@ process.stdin.on("end", () => {
     // build was impossible without also publishing. Shell and Closure artifacts
     // stay on direct release storage; GitHub artifacts are deliberately not a
     // second distribution plane.
-    const workflow = await readFile(releaseBetaWorkflowPath, "utf8");
+    const workflow = await readReleaseWorkflow(releaseBetaWorkflowPath, distributionBetaWorkflowPath);
     const macJob = sectionBetween(workflow, "  build_mac_arm64:", "  build_mac_x64:");
     const winJob = sectionBetween(workflow, "  build_win_x64:", "  publish:");
 
@@ -1953,30 +2021,32 @@ process.stdin.on("end", () => {
   });
 
   it("[P2] publishes release notes through one channel-neutral tools-release pipeline", async () => {
-    const workflows = await Promise.all([
-      readFile(releaseBetaWorkflowPath, "utf8"),
-      readFile(releasePrereleaseWorkflowPath, "utf8"),
-      readFile(releasePreviewWorkflowPath, "utf8"),
-      readFile(releaseStableWorkflowPath, "utf8"),
+    const [betaWorkflow, prereleaseWorkflow, previewWorkflow, stableWorkflow, countedDistribution, metadataDistribution] = await Promise.all([
+      readReleaseWorkflow(releaseBetaWorkflowPath, distributionBetaWorkflowPath),
+      readReleaseWorkflow(releasePrereleaseWorkflowPath, distributionPrereleaseWorkflowPath),
+      readReleaseWorkflow(releasePreviewWorkflowPath, distributionPreviewWorkflowPath),
+      readReleaseWorkflow(releaseStableWorkflowPath, distributionStableWorkflowPath),
+      readFile(join(workspaceRoot, ".github", "actions", "release", "publish-counted", "action.yml"), "utf8"),
+      readFile(join(workspaceRoot, ".github", "actions", "release", "publish-metadata", "action.yml"), "utf8"),
     ]);
 
-    for (const workflow of workflows) {
-      expect(workflow).toContain("tools-release prepare-release-note");
-      expect(workflow).toContain("tools-release publish-release-note");
-      expect(workflow).toContain("tools-release verify-release-note");
-      expect(workflow).toContain("RELEASE_NOTE_MANIFEST_PATH:");
-      expect(workflow.indexOf("tools-release prepare-release-note")).toBeLessThan(
-        workflow.indexOf("tools-release publish-release-note"),
-      );
-      expect(workflow.indexOf("tools-release publish-release-note")).toBeLessThan(
-        workflow.indexOf("tools-release verify-release-note"),
-      );
-      expect(workflow.indexOf("tools-release verify-release-note")).toBeLessThan(
-        workflow.indexOf("tools-release publish-metadata"),
-      );
+    for (const workflow of [betaWorkflow, stableWorkflow, countedDistribution]) {
+      expect(workflow).toContain("uses: ./.github/actions/release/publish-metadata");
+    }
+    expect(metadataDistribution).toContain("RELEASE_NOTE_MANIFEST_PATH:");
+    expect(metadataDistribution.indexOf("tools-release prepare-release-note")).toBeLessThan(
+      metadataDistribution.indexOf("tools-release publish-release-note"),
+    );
+    expect(metadataDistribution.indexOf("tools-release publish-release-note")).toBeLessThan(
+      metadataDistribution.indexOf("tools-release verify-release-note"),
+    );
+    expect(metadataDistribution.indexOf("tools-release verify-release-note")).toBeLessThan(
+      metadataDistribution.indexOf("tools-release publish-metadata"),
+    );
+    for (const workflow of [previewWorkflow, prereleaseWorkflow]) {
+      expect(workflow).toContain("uses: ./.github/actions/release/publish-counted");
     }
 
-    const stableWorkflow = workflows[3] ?? "";
     expect(stableWorkflow).toContain("Validate stable release note policy");
     expect(stableWorkflow).toContain(
       "RELEASE_PUBLISH_SIDE_EFFECTS: ${{ needs.metadata.outputs.publish_side_effects_enabled }}",
@@ -1985,7 +2055,7 @@ process.stdin.on("end", () => {
 
   it("[P2] requires stable release dispatch to use the release version branch", async () => {
     const [workflow, script] = await Promise.all([
-      readFile(releaseStableWorkflowPath, "utf8"),
+      readReleaseWorkflow(releaseStableWorkflowPath, distributionStableWorkflowPath),
       readFile(releaseStableScriptPath, "utf8"),
     ]);
 
@@ -2132,7 +2202,7 @@ process.stdin.on("end", () => {
 
   it("[P1] binds beta publication to the exact requested ref", async () => {
     const [betaWorkflow, dailyWorkflow] = await Promise.all([
-      readFile(releaseBetaWorkflowPath, "utf8"),
+      readReleaseWorkflow(releaseBetaWorkflowPath, distributionBetaWorkflowPath),
       readFile(notifyDailyFeishuWorkflowPath, "utf8"),
     ]);
     const metadataJob = sectionBetween(betaWorkflow, "  metadata:", "  build_mac_arm64:");
@@ -2304,16 +2374,16 @@ process.stdin.on("end", () => {
 
   it("[P1] keeps prerelease smoke failures advisory and annotates the download card", async () => {
     const [prerelease, notify, feishuCard] = await Promise.all([
-      readFile(releasePrereleaseWorkflowPath, "utf8"),
+      readReleaseWorkflow(releasePrereleaseWorkflowPath, distributionPrereleaseWorkflowPath),
       readFile(notifyReleaseFeishuWorkflowPath, "utf8"),
       readFile(feishuCardScriptPath, "utf8"),
     ]);
 
     const workflowCall = sectionBetween(prerelease, "  workflow_call:", "permissions:");
     expect(workflowCall).toContain("mac_arm64_smoke_result:");
-    expect(workflowCall).toContain("value: ${{ jobs.build_mac.outputs.smoke_result }}");
+    expect(workflowCall).toContain("value: ${{ jobs.distribute.outputs.mac_arm64_smoke_result }}");
     expect(workflowCall).toContain("win_x64_smoke_result:");
-    expect(workflowCall).toContain("value: ${{ jobs.build_win.outputs.smoke_result }}");
+    expect(workflowCall).toContain("value: ${{ jobs.distribute.outputs.win_x64_smoke_result }}");
 
     const macJob = sectionBetween(prerelease, "  build_mac:", "  build_mac_intel:");
     const macSmoke = sectionBetween(
@@ -2324,6 +2394,18 @@ process.stdin.on("end", () => {
     expect(macJob).toContain("outputs:\n      smoke_result: ${{ steps.mac_smoke.outcome }}");
     expect(macSmoke).toContain("id: mac_smoke");
     expect(macSmoke).toContain("continue-on-error: true");
+
+    const macX64Job = sectionBetween(prerelease, "  build_mac_intel:", "  build_win:");
+    const macX64Smoke = sectionBetween(
+      macX64Job,
+      "      - name: Smoke prerelease mac_x64 packaged runtime",
+      "      - name: Write mac_x64 release report",
+    );
+    expect(macX64Job).toContain("outputs:\n      smoke_result: ${{ steps.mac_x64_smoke.outcome }}");
+    expect(macX64Smoke).toContain("id: mac_x64_smoke");
+    expect(macX64Smoke).toContain("continue-on-error: true");
+    expect(macX64Smoke).toContain("pnpm exec tsx scripts/release-smoke.ts mac specs/mac.spec.ts");
+    expect(macX64Job).toContain("RELEASE_SMOKE_MODE: core");
 
     const winJob = sectionBetween(prerelease, "  build_win:", "  publish:");
     const winSmokeFixture = sectionBetween(
@@ -2579,7 +2661,7 @@ process.stdin.on("end", () => {
 
   it("[P2] supports stable metadata, prepublish, and publish dispatch modes", async () => {
     const [workflow, script] = await Promise.all([
-      readFile(releaseStableWorkflowPath, "utf8"),
+      readReleaseWorkflow(releaseStableWorkflowPath, distributionStableWorkflowPath),
       readFile(releaseStableScriptPath, "utf8"),
     ]);
 
@@ -2621,8 +2703,7 @@ process.stdin.on("end", () => {
       try {
         await execFileAsync("bash", [releaseStableNotesScriptPath], {
           cwd: workspaceRoot,
-          env: {
-            ...process.env,
+          env: workflowFixtureEnv({
             BRANCH_NAME: "release/v0.13.0",
             CLOUDFLARE_R2_RELEASES_PUBLIC_ORIGIN: envName === "CLOUDFLARE_R2_RELEASES_PUBLIC_ORIGIN" ? origin : "",
             GITHUB_OUTPUT: outputPath,
@@ -2634,7 +2715,7 @@ process.stdin.on("end", () => {
             RELEASE_VERSION: "0.13.0",
             RUNNER_TEMP: runnerTemp,
             VERSION_TAG: "open-design-v0.13.0",
-          },
+          }),
         });
 
         const outputs = parseGithubOutput(await readFile(outputPath, "utf8"));
@@ -2662,12 +2743,9 @@ process.stdin.on("end", () => {
     try {
       await mkdir(join(runnerTemp, "bin"), { recursive: true });
       await writeFakeGhBin(join(runnerTemp, "bin"), []);
-      const fakePath = `${join(runnerTemp, "bin")}${delimiter}${process.env.PATH ?? ""}`;
-
       const result = await execFileAsync(process.execPath, ["--experimental-strip-types", releaseStableScriptPath], {
         cwd: workspaceRoot,
-        env: {
-          ...process.env,
+        env: workflowFixtureEnv({
           GITHUB_REF_NAME: `release/v${baseVersion}`,
           GITHUB_REPOSITORY: "nexu-io/open-design",
           GITHUB_SHA: "0123456789abcdef0123456789abcdef01234567",
@@ -2677,9 +2755,7 @@ process.stdin.on("end", () => {
           OPEN_DESIGN_RELEASES_PUBLIC_ORIGIN: fixture.origin,
           OPEN_DESIGN_GH_NODE_SCRIPT: join(runnerTemp, "bin", "gh"),
           OPEN_DESIGN_STABLE_PRERELEASE_VERSION: prereleaseVersion,
-          Path: fakePath,
-          PATH: fakePath,
-        },
+        }, join(runnerTemp, "bin")),
       });
 
       expect(result.stdout).toContain(`[release-stable] validated prerelease: ${prereleaseVersion}`);
@@ -2703,15 +2779,17 @@ process.stdin.on("end", () => {
   });
 
   it("keeps beta on the shared payload-aware metadata surface", async () => {
-    const [releaseBetaWorkflow, platformPublishScript, publishMetadataScript] = await Promise.all([
-      readFile(releaseBetaWorkflowPath, "utf8"),
+    const [releaseBetaWorkflow, platformPublishScript, publishMetadataScript, metadataDistribution] = await Promise.all([
+      readReleaseWorkflow(releaseBetaWorkflowPath, distributionBetaWorkflowPath),
       readFile(releaseBetaPlatformPublishScriptPath, "utf8"),
       readFile(releasePublishMetadataScriptPath, "utf8"),
+      readFile(join(workspaceRoot, ".github", "actions", "release", "publish-metadata", "action.yml"), "utf8"),
     ]);
 
     expect(releaseBetaWorkflow).toContain("RELEASE_ARTIFACT_MODE: dmg-and-payload");
     expect(releaseBetaWorkflow).toContain("tools-release publish-platform");
-    expect(releaseBetaWorkflow).toContain("tools-release publish-metadata");
+    expect(releaseBetaWorkflow).toContain("uses: ./.github/actions/release/publish-metadata");
+    expect(metadataDistribution).toContain("tools-release publish-metadata");
     expect(releaseBetaWorkflow).toContain("RELEASE_MANIFEST_DIR:");
     expect(releaseBetaWorkflow).toContain("RELEASE_ASSET_SUFFIX: ${{ needs.metadata.outputs.asset_version_suffix }}");
     expect(platformPublishScript).toContain("artifacts.payload");
@@ -2722,7 +2800,7 @@ process.stdin.on("end", () => {
   });
 
   it("publishes one shared-plus-target Standalone graph in release-beta", async () => {
-    const workflow = await readFile(releaseBetaWorkflowPath, "utf8");
+    const workflow = await readReleaseWorkflow(releaseBetaWorkflowPath, distributionBetaWorkflowPath);
     const sharedJob = sectionBetween(workflow, "  metadata:", "  build_mac_arm64:");
     const macJob = sectionBetween(workflow, "  build_mac_arm64:", "  build_mac_x64:");
     const macX64Job = sectionBetween(workflow, "  build_mac_x64:", "  build_win_x64:");
@@ -2844,7 +2922,7 @@ process.stdin.on("end", () => {
     expect(sectionBetween(
       publishJob,
       "      - name: Observe directly activated beta public feed",
-      "      - name: Write beta metadata summary",
+      "      - name: Cleanup workflow artifacts",
     )).not.toContain("continue-on-error");
     expect(publishJob).toContain("tools-release observe-public-feed");
     expect(publicAcceptanceJob).toContain("runs-on: windows-latest");
@@ -2867,7 +2945,7 @@ process.stdin.on("end", () => {
 
   it("publishes release-beta mac_x64 payloads while preserving the zip feed", async () => {
     const [workflow, macSpec] = await Promise.all([
-      readFile(releaseBetaWorkflowPath, "utf8"),
+      readReleaseWorkflow(releaseBetaWorkflowPath, distributionBetaWorkflowPath),
       readFile(packagedMacSpecPath, "utf8"),
     ]);
     const macX64Job = sectionBetween(workflow, "  build_mac_x64:", "  build_win_x64:");
@@ -3434,10 +3512,10 @@ function expectCountedReleaseWorkflowCallContract(workflow: string, channel: "pr
   expect(workflow).toContain("mac_intel_url:");
   expect(workflow).toContain("win_url:");
   expect(workflow).toContain("GITHUB_SHA: ${{ needs.metadata.outputs.commit }}");
-  expect(workflow).toContain("version_metadata_url: ${{ steps.outputs.outputs.version_metadata_url }}");
-  expect(workflow).toContain("mac_arm64_url: ${{ steps.outputs.outputs.mac_arm64_dmg_url }}");
-  expect(workflow).toContain("mac_intel_url: ${{ steps.outputs.outputs.mac_x64_dmg_url }}");
-  expect(workflow).toContain("win_url: ${{ steps.outputs.outputs.win_x64_installer_url }}");
+  expect(workflow).toContain("version_metadata_url: ${{ steps.distribute.outputs.version_metadata_url }}");
+  expect(workflow).toContain("mac_arm64_url: ${{ steps.distribute.outputs.mac_arm64_url }}");
+  expect(workflow).toContain("mac_intel_url: ${{ steps.distribute.outputs.mac_x64_url }}");
+  expect(workflow).toContain("win_url: ${{ steps.distribute.outputs.win_x64_url }}");
 }
 
 async function startStablePrereleaseMetadataServer(objects: Record<string, unknown>): Promise<{
