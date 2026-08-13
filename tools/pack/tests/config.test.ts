@@ -11,8 +11,14 @@ const savedVelaWebUrl = process.env.OD_VELA_WEB_URL;
 const savedVelaWebUrlProd = process.env.OD_VELA_WEB_URL_PROD;
 const savedVelaWebUrlTest = process.env.OD_VELA_WEB_URL_TEST;
 const savedVelaWebUrlFeatureTest = process.env.OD_VELA_WEB_URL_FEATURE_TEST;
+const savedPackagedHeadless = process.env.OD_PACKAGED_E2E_HEADLESS;
 
 afterEach(() => {
+  if (savedPackagedHeadless == null) {
+    delete process.env.OD_PACKAGED_E2E_HEADLESS;
+  } else {
+    process.env.OD_PACKAGED_E2E_HEADLESS = savedPackagedHeadless;
+  }
   if (savedVelaWebUrl == null) {
     delete process.env.OD_VELA_WEB_URL;
   } else {
@@ -44,6 +50,17 @@ afterEach(() => {
   } else {
     process.env.OPEN_DESIGN_AMR_PROFILE = savedAmrProfile;
   }
+});
+
+describe("resolveToolPackConfig mac background agent", () => {
+  it("uses the packaged headless contract at build time only on macOS", () => {
+    process.env.OD_PACKAGED_E2E_HEADLESS = "1";
+    expect(resolveToolPackConfig("mac", { namespace: "background-agent" }).macBackgroundAgent).toBe(true);
+    expect(resolveToolPackConfig("win", { namespace: "background-agent" }).macBackgroundAgent).toBe(false);
+
+    process.env.OD_PACKAGED_E2E_HEADLESS = "0";
+    expect(resolveToolPackConfig("mac", { namespace: "headed" }).macBackgroundAgent).toBe(false);
+  });
 });
 
 describe("resolveToolPackConfig AMR profile", () => {
