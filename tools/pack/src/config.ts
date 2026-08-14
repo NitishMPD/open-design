@@ -53,7 +53,6 @@ export type ToolPackCliOptions = {
   removeLogs?: boolean;
   removeProductUserData?: boolean;
   removeSidecars?: boolean;
-  requireVelaCli?: boolean;
   releaseVersion?: string;
   runtimeBaseRoot?: string;
   signMode?: string;
@@ -101,7 +100,6 @@ export type ToolPackConfig = {
   removeLogs: boolean;
   removeProductUserData: boolean;
   removeSidecars: boolean;
-  requireVelaCli: boolean;
   /** Version of the packaged launcher payload; defaults to the bound release. */
   launcherVersion?: string;
   releaseVersion?: string;
@@ -455,7 +453,6 @@ export function resolveToolPackConfig(
     removeLogs: options.removeLogs === true,
     removeProductUserData: options.removeProductUserData === true,
     removeSidecars: options.removeSidecars === true,
-    requireVelaCli: options.requireVelaCli === true,
     launcherVersion,
     releaseVersion,
     silent: options.silent !== false,
