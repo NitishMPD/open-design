@@ -26,6 +26,9 @@ const DEEPSEEK_AUTH_GUIDANCE =
 const DEEPSEEK_HARNESS_AUTH_GUIDANCE =
   'DeepSeek Harness has no model API key configured. Open a terminal and run `dsh web`, then open Settings → Models and add your DeepSeek API key. Return to OpenDesign and retry. For automation, expose DEEPSEEK_API_KEY to the OpenDesign process.';
 
+const DEEPSEEK_HARNESS_AUTH_GUIDANCE =
+  'DeepSeek Harness has no model API key configured. Open a terminal and run `dsh web`, then open Settings → Models and add your DeepSeek API key. Return to Open Design and retry. For automation, expose DEEPSEEK_API_KEY to the Open Design process.';
+
 // agy's print mode (`-p`) detects a missing OAuth token, prints the
 // Google sign-in URL to stdout, waits 30s for completion, then exits
 // "Error: authentication timed out." That URL points at a callback page
