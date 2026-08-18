@@ -4,6 +4,9 @@ import { AnimatePresence, motion, MotionConfig } from 'motion/react';
 import { Button } from '@open-design/components';
 import { useAnalytics } from './analytics/provider';
 import {
+  trackExperienceSurveyDismissed,
+  trackExperienceSurveySent,
+  trackExperienceSurveyShown,
   trackFileUploadResult,
   trackProjectCreateResult,
 } from './analytics/events';
@@ -54,6 +57,7 @@ import {
 import { ProjectCreationPendingView } from './components/ProjectCreationPendingView';
 import { AmrArtifactUpgradeGate } from './components/AmrArtifactUpgradeGate';
 import { AmrArtifactUpgradeHomeCard } from './components/AmrArtifactUpgradeHomeCard';
+import { ExperienceSurvey } from './components/ExperienceSurvey';
 import { TooltipLayer } from './components/TooltipLayer';
 import { UpdateDialog } from './components/UpdateDialog';
 import {
@@ -5323,6 +5327,15 @@ function AppInner() {
       )}
       <TooltipLayer />
       <UpdateDialog />
+      {/* Mounted at shell level, outside the route views, so a survey armed by
+          an export inside a project stays on screen when the user navigates
+          back to home. */}
+      <ExperienceSurvey
+        metricsConsent={config.telemetry?.metrics === true}
+        onExposure={() => trackExperienceSurveyShown(analytics.track)}
+        onDismiss={() => trackExperienceSurveyDismissed(analytics.track)}
+        onSubmit={(answers) => trackExperienceSurveySent(analytics.track, answers)}
+      />
       <AmrArtifactUpgradeGate
         homeVisible={route.kind === 'home' && route.view === 'home'}
         activeProjectId={route.kind === 'project' ? route.projectId : null}
