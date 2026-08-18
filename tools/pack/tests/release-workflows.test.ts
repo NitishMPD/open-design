@@ -82,9 +82,12 @@ describe("release workflow topology", () => {
   });
 
   it("builds all exact platforms by default and activates only after public acceptance", async () => {
-    const [entry, acceptance] = await Promise.all([
+    const [entry, acceptance, stage, executeAcceptance, activateAcceptance] = await Promise.all([
       read(".github/workflows/release-beta.yml"),
       read(".github/workflows/distribution-exact-accept.yml"),
+      read(".github/actions/release/exact/stage/action.yml"),
+      read(".github/actions/release/public-acceptance/execute/action.yml"),
+      read(".github/actions/release/public-acceptance/activate/action.yml"),
     ]);
 
     expect(entry).not.toMatch(/^\s{6}enable_(mac_arm64|mac_x64|win_x64):/mu);
@@ -92,14 +95,14 @@ describe("release workflow topology", () => {
       expect(entry).toContain(`target: ${target}`);
     }
     for (const target of ["mac_arm64", "mac_x64", "win_x64"]) {
-      expect(acceptance).toContain(`target: ${target}`);
+      expect(acceptance).toContain(`"target":"${target}"`);
     }
     expect(entry).toContain("uses: ./.github/workflows/distribution-exact-accept.yml");
-    expect(entry).toContain("tools-release stage-acceptance-feed");
-    expect(acceptance).toContain("tools-release prepare-public-acceptance");
-    expect(acceptance).toContain("tools-release issue-public-acceptance");
-    expect(acceptance).toContain("tools-release activate-public-release");
-    expect(acceptance).toContain("tools-release observe-public-feed");
+    expect(stage).toContain("tools-release stage-acceptance-feed");
+    expect(executeAcceptance).toContain("tools-release prepare-public-acceptance");
+    expect(executeAcceptance).toContain("tools-release issue-public-acceptance");
+    expect(activateAcceptance).toContain("tools-release activate-public-release");
+    expect(activateAcceptance).toContain("tools-release observe-public-feed");
   });
 
   it("uses exact platform composites and dynamic release identity", async () => {
@@ -129,15 +132,17 @@ describe("release workflow topology", () => {
   });
 
   it("validates a real installation with embedded config through mutable discovery and immutable binding", async () => {
-    const [acceptance, lifecycle, packagedConfig] = await Promise.all([
+    const [acceptance, executeAcceptance, lifecycle, packagedConfig] = await Promise.all([
       read(".github/workflows/distribution-exact-accept.yml"),
+      read(".github/actions/release/public-acceptance/execute/action.yml"),
       read("tools/pack/src/mac/lifecycle.ts"),
       read("tools/pack/src/mac/app.ts"),
     ]);
 
-    expect(acceptance).toContain('OD_TOOLS_PACK_EMBEDDED_CONFIG_ONLY: "1"');
-    expect(acceptance).toContain("OD_STANDALONE_METADATA_URL: ${{ inputs.mutable_metadata_url }}");
-    expect(acceptance).not.toContain("OD_PACKAGED_CONFIG_PATH:");
+    expect(acceptance).toContain("uses: ./.github/actions/release/public-acceptance/execute");
+    expect(executeAcceptance).toContain('OD_TOOLS_PACK_EMBEDDED_CONFIG_ONLY: "1"');
+    expect(executeAcceptance).toContain("OD_STANDALONE_METADATA_URL: ${{ inputs.mutable-metadata-url }}");
+    expect(executeAcceptance).not.toContain("OD_PACKAGED_CONFIG_PATH:");
     expect(lifecycle).toContain('process.env.OD_TOOLS_PACK_EMBEDDED_CONFIG_ONLY === "1"');
     expect(packagedConfig).toContain("!options.config.portable");
     expect(packagedConfig).toContain("launcherVersion: options.shellVersion");
@@ -166,10 +171,13 @@ describe("release workflow topology", () => {
   });
 
   it("derives one Closure compatibility epoch and accepts its N-1 boundary", async () => {
-    const exact = await read(".github/workflows/release-beta.yml");
+    const [exact, stage] = await Promise.all([
+      read(".github/workflows/release-beta.yml"),
+      read(".github/actions/release/exact/stage/action.yml"),
+    ]);
     expect(exact).toContain("steps.exact.outputs.closure_min_shell_version");
     expect(exact).toContain("needs.metadata.outputs.closure_min_shell_version");
-    expect(exact).toContain("tools-release verify-closure-preflight");
+    expect(stage).toContain("tools-release verify-closure-preflight");
     expect(exact).not.toMatch(/CLOSURE_MIN_SHELL_VERSION:\s+[^$\n]/u);
   });
 

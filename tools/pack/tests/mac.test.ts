@@ -1,4 +1,4 @@
-import { access, mkdtemp, mkdir, readFile, readdir, rm, writeFile } from "node:fs/promises";
+import { access, mkdtemp, mkdir, readFile, rm, writeFile } from "node:fs/promises";
 import os, { tmpdir } from "node:os";
 import { dirname, join, resolve } from "node:path";
 import process from "node:process";
@@ -181,19 +181,6 @@ describe("copyResourceTree", () => {
       for (const name of resourceNames) {
         await mkdir(join(root, name), { recursive: true });
       }
-      const dshRuntimeRoot = join(root, "packages", "dsh-runtime");
-      await mkdir(join(dshRuntimeRoot, "dist", "types"), { recursive: true });
-      await writeFile(
-        join(dshRuntimeRoot, "package.json"),
-        `${JSON.stringify({
-          name: "@open-design/dsh-runtime",
-          version: "0.1.0",
-          files: ["dist"],
-        }, null, 2)}\n`,
-        "utf8",
-      );
-      await writeFile(join(dshRuntimeRoot, "dist", "index.js"), "export {};\n", "utf8");
-      await writeFile(join(dshRuntimeRoot, "dist", "types", "index.d.ts"), "export {};\n", "utf8");
       await mkdir(join(root, "apps", "standalone", "dist", "bootstrap"), { recursive: true });
       await writeFile(join(root, "apps", "standalone", "dist", "bootstrap", "bootloader.mjs"), "bootstrap\n");
       await mkdir(join(root, "apps", "standalone", "dist", "bootstrap", "baseline"), { recursive: true });
@@ -202,11 +189,6 @@ describe("copyResourceTree", () => {
       await copyResourceTree(config, paths);
 
       expect(await pathExists(join(paths.resourceRoot, "bin", "node"))).toBe(true);
-      const dshRuntimeResourceRoot = join(paths.resourceRoot, "agent-runtimes", "deepseek-harness");
-      await expect(readFile(join(dshRuntimeResourceRoot, "manifest.json"), "utf8")).resolves.toContain(
-        '"packageName": "@open-design/dsh-runtime"',
-      );
-      expect((await readdir(dshRuntimeResourceRoot)).filter((entry) => entry.endsWith(".tgz"))).toHaveLength(1);
       expect(await pathExists(join(paths.resourceRoot, "standalone", "bootloader.mjs"))).toBe(true);
       expect(await pathExists(join(paths.resourceRoot, "standalone", "baseline", "launcher.mjs"))).toBe(true);
       expect(JSON.parse(await readFile(join(paths.resourceRoot, "standalone", "repository.json"), "utf8")))

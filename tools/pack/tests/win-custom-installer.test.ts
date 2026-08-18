@@ -9,13 +9,11 @@ import { buildCustomWinNsisInstaller } from "../src/win/custom-installer.js";
 import { resolveWinPaths } from "../src/win/paths.js";
 
 const BUILD_HOST_NSIS_LOG_PATH = "D:\\a\\_temp\\tools-pack\\logs\\nsis.log";
-const PORTABLE_NSIS_LOG_DIR = "$TEMP\\Open Design\\test-namespace";
+const PORTABLE_NSIS_LOG_DIR = "$TEMP\\Open Design\\installer-logs\\namespaces\\test-namespace";
 const PORTABLE_NSIS_LOG_PATH = `${PORTABLE_NSIS_LOG_DIR}\\nsis.log`;
 
 function createConfig(root: string, portable: boolean): ToolPackConfig {
   return {
-    appVersion: "1.2.3",
-    containerized: false,
     electronBuilderCliPath: "/unused/electron-builder",
     electronDistPath: "/unused/electron",
     electronVersion: "0.0.0",

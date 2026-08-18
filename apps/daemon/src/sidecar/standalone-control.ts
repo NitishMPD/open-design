@@ -7,14 +7,11 @@ import {
 } from "@open-design/sidecar/control";
 import {
   STANDALONE_SHELL_CAPABILITIES,
-  STANDALONE_BODY_BRIDGE_SERVICE,
-  type StandalonePreparedResource,
   type StandaloneProtocolJsonValue,
   type StandaloneShellCapability,
   type StandaloneShellCapabilityInput,
   type StandaloneShellCapabilityOutput,
   type StandaloneShellCapabilityResult,
-  type StandaloneResourceEnsureRequest,
   validateStandaloneShellCapabilityInput,
   validateStandaloneShellCapabilityOutput,
 } from "@open-design/standalone/protocol";
@@ -39,10 +36,6 @@ type ShellCapabilityBridgeMethods = {
     Readonly<{ attachmentId: string; capability: string; input: StandaloneProtocolJsonValue }>,
     StandaloneShellCapabilityResult
   >;
-};
-
-type StandaloneBodyBridgeMethods = {
-  ensureResource: SidecarMethod<StandaloneResourceEnsureRequest, StandalonePreparedResource>;
 };
 
 const STANDALONE_SHELL_CAPABILITY_SERVICE = "shell";
@@ -76,10 +69,9 @@ async function startDefaultRuntime(
       namespace: context.identity.namespace,
     },
   });
-  const [shellCapabilities, bodyBridge] = await Promise.all([
-    controlPlane.connect<ShellCapabilityBridgeMethods>(STANDALONE_SHELL_CAPABILITY_SERVICE),
-    controlPlane.connect<StandaloneBodyBridgeMethods>(STANDALONE_BODY_BRIDGE_SERVICE),
-  ]);
+  const shellCapabilities = await controlPlane.connect<ShellCapabilityBridgeMethods>(
+    STANDALONE_SHELL_CAPABILITY_SERVICE,
+  );
   const invokeShell = async <TCapability extends StandaloneShellCapability>(
     capability: TCapability,
     input: StandaloneShellCapabilityInput<TCapability>,
@@ -107,11 +99,6 @@ async function startDefaultRuntime(
     throw new Error(`Electron Shell capability failed: ${capability} (${result.error.code})`);
   };
   const started = await startDaemonRuntime({
-    ensureClosureResource: async (id) => await bodyBridge.call(
-      "ensureResource",
-      { id },
-      { timeoutMs: null },
-    ),
     desktopArtifactExporter: async (input) =>
       await invokeShell(
         STANDALONE_SHELL_CAPABILITIES.EXPORT_ARTIFACT,
