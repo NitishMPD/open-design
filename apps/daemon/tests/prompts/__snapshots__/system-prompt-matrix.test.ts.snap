@@ -14,7 +14,11 @@ exports[`composeSystemPrompt — scenario × section golden matrix > keeps the s
       "clarifying-questions",
       "role-marker-guard",
     ],
+<<<<<<< HEAD
     "totalChars": 59977,
+=======
+    "totalChars": 60675,
+>>>>>>> 833e1a20d (fix(daemon): carry Vela image safety refusals through to the client (#6993))
   },
   "ask-mode-full-context": {
     "sections": [
@@ -48,7 +52,11 @@ exports[`composeSystemPrompt — scenario × section golden matrix > keeps the s
       "clarifying-questions",
       "role-marker-guard",
     ],
+<<<<<<< HEAD
     "totalChars": 45265,
+=======
+    "totalChars": 45962,
+>>>>>>> 833e1a20d (fix(daemon): carry Vela image safety refusals through to the client (#6993))
   },
   "critique-enabled": {
     "sections": [
@@ -69,7 +77,11 @@ exports[`composeSystemPrompt — scenario × section golden matrix > keeps the s
       "clarifying-questions",
       "role-marker-guard",
     ],
+<<<<<<< HEAD
     "totalChars": 59110,
+=======
+    "totalChars": 59806,
+>>>>>>> 833e1a20d (fix(daemon): carry Vela image safety refusals through to the client (#6993))
   },
   "deck-kind-no-skill": {
     "sections": [
@@ -84,7 +96,11 @@ exports[`composeSystemPrompt — scenario × section golden matrix > keeps the s
       "clarifying-questions",
       "role-marker-guard",
     ],
+<<<<<<< HEAD
     "totalChars": 84867,
+=======
+    "totalChars": 85563,
+>>>>>>> 833e1a20d (fix(daemon): carry Vela image safety refusals through to the client (#6993))
   },
   "deck-kind-with-skill-seed": {
     "sections": [
@@ -99,7 +115,11 @@ exports[`composeSystemPrompt — scenario × section golden matrix > keeps the s
       "clarifying-questions",
       "role-marker-guard",
     ],
+<<<<<<< HEAD
     "totalChars": 57568,
+=======
+    "totalChars": 58264,
+>>>>>>> 833e1a20d (fix(daemon): carry Vela image safety refusals through to the client (#6993))
   },
   "design-ds-fixture-fallback": {
     "sections": [
@@ -120,7 +140,11 @@ exports[`composeSystemPrompt — scenario × section golden matrix > keeps the s
       "clarifying-questions",
       "role-marker-guard",
     ],
+<<<<<<< HEAD
     "totalChars": 80949,
+=======
+    "totalChars": 81645,
+>>>>>>> 833e1a20d (fix(daemon): carry Vela image safety refusals through to the client (#6993))
   },
   "design-ds-invalid-runtime": {
     "sections": [
@@ -141,7 +165,11 @@ exports[`composeSystemPrompt — scenario × section golden matrix > keeps the s
       "clarifying-questions",
       "role-marker-guard",
     ],
+<<<<<<< HEAD
     "totalChars": 80981,
+=======
+    "totalChars": 81677,
+>>>>>>> 833e1a20d (fix(daemon): carry Vela image safety refusals through to the client (#6993))
   },
   "design-ds-manifest-legacy": {
     "sections": [
@@ -162,7 +190,11 @@ exports[`composeSystemPrompt — scenario × section golden matrix > keeps the s
       "clarifying-questions",
       "role-marker-guard",
     ],
+<<<<<<< HEAD
     "totalChars": 80947,
+=======
+    "totalChars": 81643,
+>>>>>>> 833e1a20d (fix(daemon): carry Vela image safety refusals through to the client (#6993))
   },
   "design-full-stack": {
     "sections": [
@@ -192,7 +224,11 @@ exports[`composeSystemPrompt — scenario × section golden matrix > keeps the s
       "clarifying-questions",
       "role-marker-guard",
     ],
+<<<<<<< HEAD
     "totalChars": 68447,
+=======
+    "totalChars": 69142,
+>>>>>>> 833e1a20d (fix(daemon): carry Vela image safety refusals through to the client (#6993))
   },
   "design-minimal": {
     "sections": [
@@ -207,7 +243,11 @@ exports[`composeSystemPrompt — scenario × section golden matrix > keeps the s
       "clarifying-questions",
       "role-marker-guard",
     ],
+<<<<<<< HEAD
     "totalChars": 84823,
+=======
+    "totalChars": 85519,
+>>>>>>> 833e1a20d (fix(daemon): carry Vela image safety refusals through to the client (#6993))
   },
   "design-no-ds-multitarget": {
     "sections": [
@@ -222,7 +262,11 @@ exports[`composeSystemPrompt — scenario × section golden matrix > keeps the s
       "clarifying-questions",
       "role-marker-guard",
     ],
+<<<<<<< HEAD
     "totalChars": 63134,
+=======
+    "totalChars": 63830,
+>>>>>>> 833e1a20d (fix(daemon): carry Vela image safety refusals through to the client (#6993))
   },
   "example-prompt": {
     "sections": [
@@ -237,7 +281,11 @@ exports[`composeSystemPrompt — scenario × section golden matrix > keeps the s
       "clarifying-questions",
       "role-marker-guard",
     ],
+<<<<<<< HEAD
     "totalChars": 61381,
+=======
+    "totalChars": 62077,
+>>>>>>> 833e1a20d (fix(daemon): carry Vela image safety refusals through to the client (#6993))
   },
   "freeform-other": {
     "sections": [
@@ -253,7 +301,11 @@ exports[`composeSystemPrompt — scenario × section golden matrix > keeps the s
       "clarifying-questions",
       "role-marker-guard",
     ],
+<<<<<<< HEAD
     "totalChars": 88519,
+=======
+    "totalChars": 89215,
+>>>>>>> 833e1a20d (fix(daemon): carry Vela image safety refusals through to the client (#6993))
   },
   "freeform-other-no-deck-signal": {
     "sections": [
@@ -267,7 +319,11 @@ exports[`composeSystemPrompt — scenario × section golden matrix > keeps the s
       "clarifying-questions",
       "role-marker-guard",
     ],
+<<<<<<< HEAD
     "totalChars": 60304,
+=======
+    "totalChars": 61000,
+>>>>>>> 833e1a20d (fix(daemon): carry Vela image safety refusals through to the client (#6993))
   },
   "media-image": {
     "sections": [
@@ -279,7 +335,11 @@ exports[`composeSystemPrompt — scenario × section golden matrix > keeps the s
       "clarifying-questions",
       "role-marker-guard",
     ],
+<<<<<<< HEAD
     "totalChars": 45263,
+=======
+    "totalChars": 45960,
+>>>>>>> 833e1a20d (fix(daemon): carry Vela image safety refusals through to the client (#6993))
   },
   "memory-hooks-off": {
     "sections": [
@@ -296,7 +356,11 @@ exports[`composeSystemPrompt — scenario × section golden matrix > keeps the s
       "clarifying-questions",
       "role-marker-guard",
     ],
+<<<<<<< HEAD
     "totalChars": 87051,
+=======
+    "totalChars": 87747,
+>>>>>>> 833e1a20d (fix(daemon): carry Vela image safety refusals through to the client (#6993))
   },
   "plan-mode": {
     "sections": [
@@ -311,7 +375,11 @@ exports[`composeSystemPrompt — scenario × section golden matrix > keeps the s
       "clarifying-questions",
       "role-marker-guard",
     ],
+<<<<<<< HEAD
     "totalChars": 64329,
+=======
+    "totalChars": 65024,
+>>>>>>> 833e1a20d (fix(daemon): carry Vela image safety refusals through to the client (#6993))
   },
   "plugin-stages": {
     "sections": [
@@ -328,7 +396,11 @@ exports[`composeSystemPrompt — scenario × section golden matrix > keeps the s
       "clarifying-questions",
       "role-marker-guard",
     ],
+<<<<<<< HEAD
     "totalChars": 84919,
+=======
+    "totalChars": 85615,
+>>>>>>> 833e1a20d (fix(daemon): carry Vela image safety refusals through to the client (#6993))
   },
   "skip-discovery-brief": {
     "sections": [
@@ -343,7 +415,11 @@ exports[`composeSystemPrompt — scenario × section golden matrix > keeps the s
       "clarifying-questions",
       "role-marker-guard",
     ],
+<<<<<<< HEAD
     "totalChars": 60892,
+=======
+    "totalChars": 61588,
+>>>>>>> 833e1a20d (fix(daemon): carry Vela image safety refusals through to the client (#6993))
   },
   "slim-design-full-stack": {
     "sections": [
@@ -370,7 +446,11 @@ exports[`composeSystemPrompt — scenario × section golden matrix > keeps the s
       "media-dispatch-hint",
       "role-marker-guard",
     ],
+<<<<<<< HEAD
     "totalChars": 41304,
+=======
+    "totalChars": 42005,
+>>>>>>> 833e1a20d (fix(daemon): carry Vela image safety refusals through to the client (#6993))
   },
   "slim-freeform-no-deck-signal": {
     "sections": [
@@ -380,7 +460,11 @@ exports[`composeSystemPrompt — scenario × section golden matrix > keeps the s
       "media-dispatch-hint",
       "role-marker-guard",
     ],
+<<<<<<< HEAD
     "totalChars": 31284,
+=======
+    "totalChars": 31986,
+>>>>>>> 833e1a20d (fix(daemon): carry Vela image safety refusals through to the client (#6993))
   },
 }
 `;
