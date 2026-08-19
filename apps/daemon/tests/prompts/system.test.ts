@@ -271,6 +271,8 @@ describe('composeSystemPrompt', () => {
     expect(prompt).toContain('**Pre-flight (do this before any other tool):**');
     expect(prompt).toContain('`references/html-in-canvas.md`');
     expect(prompt).toContain('`"$OD_NODE_BIN" "$OD_BIN" media scaffold`');
+    expect(prompt).toContain('The scaffold gives you a valid GSAP-ready');
+    expect(prompt).not.toContain('The init scaffold');
     expect(prompt).toContain('media generate --surface video --model hyperframes-html --composition-dir <rel>');
     expect(prompt).toContain('Do not run HyperFrames `render` yourself');
     expect(prompt).not.toContain('npx hyperframes');
@@ -282,6 +284,8 @@ describe('composeSystemPrompt', () => {
   it('keeps both hyperframes skill copies aligned with the daemon render handoff', () => {
     for (const markdown of [hyperframesSkillMarkdown, officialHyperframesSkillMarkdown]) {
       expect(markdown).toContain('"$OD_NODE_BIN" "$OD_BIN" media scaffold');
+      expect(markdown).toContain('scaffold + edit is the default path');
+      expect(markdown).not.toContain('init + edit is the default path');
       expect(markdown).toContain('media generate --surface video --model hyperframes-html --composition-dir <rel>');
       expect(markdown).toContain('Do not run HyperFrames `render`');
       expect(markdown).not.toContain('npx hyperframes');

@@ -277,7 +277,7 @@ counts in chat instead of a silent spinner).
 **Default recipe — use Open Design's scaffold, don't write from scratch.**
 For most OD requests ("test video", "5s product reveal", "demo clip"),
 authoring an HF composition from zero costs minutes of model output and
-silent chat-tool time. The init scaffold gives you a valid GSAP-ready
+silent chat-tool time. The scaffold gives you a valid GSAP-ready
 template in under a second; edit only the parts that the user's prompt
 actually changes.
 

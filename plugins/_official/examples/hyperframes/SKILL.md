@@ -119,7 +119,7 @@ When to skip the scaffold and write from scratch: only when the user
 explicitly asks for something the blank template clearly can't host
 (e.g. multi-composition timelines, audio-reactive overlays, captions
 synced to a TTS track they've already generated). For everything else,
-init + edit is the default path.
+scaffold + edit is the default path.
 
 The lighter HF subcommands you CAN still run from your own shell
 (they don't need to spawn Chrome):
