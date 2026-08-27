@@ -1,8 +1,11 @@
-import { mkdtemp, writeFile } from "node:fs/promises";
+import { mkdtemp, readFile, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import path from "node:path";
+import { fileURLToPath } from "node:url";
+import { promisify } from "node:util";
+import { gunzip } from "node:zlib";
 
-import { BrowserWindow } from "electron";
+import { BrowserWindow, clipboard } from "electron";
 import type {
   DesktopExportArtifactInput,
   DesktopExportArtifactResult,
@@ -40,12 +43,52 @@ export async function exportArtifact(
     await waitForPrintableContent(window);
 
     if (input.format === "pdf") return await renderPdf(window, input);
+    if (input.format === "figma") return await renderFigma(window, input);
     return await renderImage(window, input);
   } catch (error) {
     return { error: error instanceof Error ? error.message : String(error), ok: false };
   } finally {
     if (!window.isDestroyed()) window.destroy();
   }
+}
+
+const gunzipAsync = promisify(gunzip);
+
+async function readFigmaBundle(): Promise<string> {
+  const here = path.dirname(fileURLToPath(import.meta.url));
+  const candidates = [
+    path.join(process.resourcesPath, "web-to-figma.bundle.js.gz"),
+    path.resolve(here, "../../vendor/web-to-figma/web-to-figma.bundle.js.gz"),
+    path.resolve(here, "../../../vendor/web-to-figma/web-to-figma.bundle.js.gz"),
+  ];
+  for (const candidate of candidates) {
+    try {
+      return (await gunzipAsync(await readFile(candidate))).toString("utf8");
+    } catch {
+      // Try the source-tree or packaged-resource candidate next.
+    }
+  }
+  throw new Error("web-to-figma vendor bundle not found");
+}
+
+async function renderFigma(
+  window: BrowserWindow,
+  input: DesktopExportArtifactInput,
+): Promise<DesktopExportArtifactResult> {
+  await window.webContents.executeJavaScript(await readFigmaBundle(), true);
+  const payload = await window.webContents.executeJavaScript(`(async()=>{
+    const converter = ODFigma.createFigmaConverter();
+    const result = await converter.convert({
+      element: document.body,
+      width: ${JSON.stringify(input.width ?? (input.deck ? 1920 : 1440))},
+      height: Math.max(${JSON.stringify(input.height ?? (input.deck ? 1080 : 900))}, document.documentElement.scrollHeight || 0),
+      name: ${JSON.stringify(input.title)}
+    });
+    return result.toClipboardHtml();
+  })()`, true) as string;
+  if (!payload) throw new Error("Figma conversion returned an empty clipboard payload");
+  clipboard.writeHTML(payload);
+  return { copied: true, ok: true };
 }
 
 async function renderPdf(

@@ -34,8 +34,9 @@ button.primary {
   color: var(--bg);
 }
 button.primary:hover:not(:disabled) {
-  background: #353535;
-  border-color: #353535;
+  background: var(--text);
+  border-color: var(--text);
+  color: var(--bg);
 }
 button.primary:active:not(:disabled) {
   background: var(--text);

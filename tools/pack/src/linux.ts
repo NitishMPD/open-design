@@ -28,6 +28,7 @@ import {
 
 import type { ToolPackConfig } from "./config/index.js";
 import { domToPptxBundleResource } from "./dom-to-pptx-resource.js";
+import { webToFigmaBundleResource } from "./web-to-figma-resource.js";
 import { copyBundledResourceTrees, linuxResources, packBundledDshRuntime } from "./resources/index.js";
 import { copyOptionalVelaCliBinary } from "./vela-cli.js";
 import { electronBuilderVersionForAppVersion, readRuntimeAppVersion } from "./versioning/index.js";
@@ -653,6 +654,7 @@ async function writeLinuxBuilderConfig(config: ToolPackConfig, paths: LinuxPaths
       // Vendored dom-to-pptx browser bundle for editable PPTX export (read from
       // process.resourcesPath by the desktop main at runtime).
       domToPptxBundleResource(config),
+      webToFigmaBundleResource(config),
     ],
     ...(config.to === "dir"
       ? {}

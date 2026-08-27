@@ -7,6 +7,7 @@ import { promisify } from "node:util";
 import { hashJson, hashPath, type CacheNode, ToolPackCache } from "../cache/index.js";
 import type { ToolPackConfig } from "../config/index.js";
 import { domToPptxBundleResource } from "../dom-to-pptx-resource.js";
+import { webToFigmaBundleResource } from "../web-to-figma-resource.js";
 import {
   assertNodePtyRuntime,
   validateNodePtyRuntime,
@@ -70,7 +71,7 @@ import type {
 
 const execFileAsync = promisify(execFile);
 const WIN_ARCHIVE_CACHE_VERSION = 3;
-const WIN_ELECTRON_BUILDER_DIR_CACHE_VERSION = 8;
+const WIN_ELECTRON_BUILDER_DIR_CACHE_VERSION = 9;
 const WIN_NSIS_BASE_PAYLOAD_INPUT_HASH_CACHE_VERSION = 2;
 
 async function hashWinNsisInstallerImplementation(config: ToolPackConfig): Promise<string> {
@@ -202,6 +203,8 @@ async function runElectronBuilderRaw(
       // Vendored dom-to-pptx browser bundle for editable PPTX export (read from
       // process.resourcesPath by the desktop main at runtime).
       domToPptxBundleResource(config),
+      // Vendored DOM-to-Figma converter used by the desktop/CLI clipboard export.
+      webToFigmaBundleResource(config),
     ],
     files: [...ELECTRON_BUILDER_FILE_PATTERNS],
     forceCodeSigning: false,
@@ -539,11 +542,13 @@ export async function runElectronBuilder(
     : {};
   const afterPackHook = config.webOutputMode === "standalone" ? await hashPath(winResources.webStandaloneAfterPackHook) : null;
   const domToPptxBundle = await hashPath(domToPptxBundleResource(config).from);
+  const webToFigmaBundle = await hashPath(webToFigmaBundleResource(config).from);
   const winIcon = await hashPath(winResources.icon);
   const electronBuilderKeyInput = {
     afterPackHook,
     cacheVersion: WIN_ELECTRON_BUILDER_DIR_CACHE_VERSION,
     domToPptxBundle,
+    webToFigmaBundle,
     asar: ELECTRON_BUILDER_ASAR,
     buildDependenciesFromSource: ELECTRON_BUILDER_BUILD_DEPENDENCIES_FROM_SOURCE,
     electronBuilderCliPath: config.electronBuilderCliPath,

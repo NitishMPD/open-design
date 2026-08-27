@@ -360,6 +360,18 @@ describe("open-design sidecar contract", () => {
     ).toThrow(/unsupported artifact export image format/);
   });
 
+  it("accepts Figma clipboard artifact export", () => {
+    expect(
+      normalizeDesktopSidecarMessage({
+        input: { deck: false, format: "figma", html: "<p>x</p>", title: "Design" },
+        type: SIDECAR_MESSAGES.EXPORT_ARTIFACT,
+      }),
+    ).toEqual({
+      input: { deck: false, format: "figma", html: "<p>x</p>", title: "Design" },
+      type: "export-artifact",
+    });
+  });
+
   it("validates desktop update IPC message inputs", () => {
     expect(
       normalizeDesktopSidecarMessage({

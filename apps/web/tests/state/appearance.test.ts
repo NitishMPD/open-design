@@ -5,8 +5,18 @@ import {
   DEFAULT_ACCENT_COLOR,
   applyAppearanceToDocument,
   normalizeAccentColor,
+  resolveAppTheme,
   resolveAccentColor,
 } from '../../src/state/appearance';
+
+describe('resolveAppTheme', () => {
+  it('preserves supported themes and falls back to light', () => {
+    expect(resolveAppTheme('dark')).toBe('dark');
+    expect(resolveAppTheme('system')).toBe('system');
+    expect(resolveAppTheme('light')).toBe('light');
+    expect(resolveAppTheme(undefined)).toBe('light');
+  });
+});
 
 describe('normalizeAccentColor', () => {
   it('accepts six-digit hex colors and normalizes casing', () => {
@@ -37,12 +47,19 @@ describe('applyAppearanceToDocument', () => {
     document.documentElement.style.removeProperty('--accent-hover');
   });
 
-  it('applies the forced light theme and accent variables to the root element', () => {
-    applyAppearanceToDocument({ accentColor: '#4F46E5' });
+  it('applies the requested dark theme and accent variables to the root element', () => {
+    applyAppearanceToDocument({ theme: 'dark', accentColor: '#4F46E5' });
 
-    expect(document.documentElement.getAttribute('data-theme')).toBe('light');
+    expect(document.documentElement.getAttribute('data-theme')).toBe('dark');
     expect(document.documentElement.style.getPropertyValue('--accent')).toBe('#4f46e5');
     expect(document.documentElement.style.getPropertyValue('--accent-hover')).toContain('#4f46e5');
+  });
+
+  it('leaves the default accent CSS-owned in dark mode', () => {
+    applyAppearanceToDocument({ theme: 'dark', accentColor: DEFAULT_ACCENT_COLOR });
+
+    expect(document.documentElement.style.getPropertyValue('--accent')).toBe('');
+    expect(document.documentElement.style.getPropertyValue('--accent-hover')).toBe('');
   });
 
   it('does not apply appearance colors to global background variables', () => {
@@ -58,17 +75,23 @@ describe('applyAppearanceToDocument', () => {
     document.documentElement.style.removeProperty('--bg-app');
   });
 
-  it('applies accent variables while forcing a stale dark theme back to light', () => {
-    document.documentElement.setAttribute('data-theme', 'dark');
+  it('applies accent variables while switching themes', () => {
+    document.documentElement.setAttribute('data-theme', 'light');
 
-    applyAppearanceToDocument({ accentColor: '#10B981' });
+    applyAppearanceToDocument({ theme: 'dark', accentColor: '#10B981' });
 
-    expect(document.documentElement.getAttribute('data-theme')).toBe('light');
+    expect(document.documentElement.getAttribute('data-theme')).toBe('dark');
     expect(document.documentElement.style.getPropertyValue('--accent')).toBe('#10b981');
     expect(document.documentElement.style.getPropertyValue('--accent-strong')).toContain('#10b981');
     expect(document.documentElement.style.getPropertyValue('--accent-soft')).toContain('#10b981');
     expect(document.documentElement.style.getPropertyValue('--accent-tint')).toContain('#10b981');
     expect(document.documentElement.style.getPropertyValue('--accent-hover')).toContain('#10b981');
+  });
+
+  it('removes the explicit theme attribute in system mode', () => {
+    document.documentElement.setAttribute('data-theme', 'light');
+    applyAppearanceToDocument({ theme: 'system' });
+    expect(document.documentElement.hasAttribute('data-theme')).toBe(false);
   });
 
   it('replaces existing accent variables when the saved color changes', () => {
@@ -90,6 +113,6 @@ describe('applyAppearanceToDocument', () => {
     applyAppearanceToDocument({ accentColor: 'not-a-color' });
 
     expect(document.documentElement.getAttribute('data-theme')).toBe('light');
-    expect(document.documentElement.style.getPropertyValue('--accent')).toBe(DEFAULT_ACCENT_COLOR);
+    expect(document.documentElement.style.getPropertyValue('--accent')).toBe('');
   });
 });

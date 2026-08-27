@@ -318,7 +318,7 @@ export type DesktopRenderSlidesResult = {
   width?: number;
 };
 
-export type DesktopExportArtifactFormat = "pdf" | "image";
+export type DesktopExportArtifactFormat = "pdf" | "image" | "figma";
 // Electron's `nativeImage` (the off-screen renderer the programmatic exporter
 // uses) can only encode PNG and JPEG. WebP is deliberately excluded so a caller
 // asking for it gets a clear validation error instead of a silent PNG downgrade.
@@ -342,6 +342,7 @@ export type DesktopExportArtifactInput = {
 
 export type DesktopExportArtifactResult = {
   bytes?: number;
+  copied?: boolean;
   error?: string;
   mime?: string;
   ok: boolean;
@@ -889,7 +890,7 @@ function normalizeOptionalPositiveNumber(value: unknown, label: string): number 
   return value;
 }
 
-const DESKTOP_EXPORT_ARTIFACT_FORMATS: readonly DesktopExportArtifactFormat[] = ["pdf", "image"];
+const DESKTOP_EXPORT_ARTIFACT_FORMATS: readonly DesktopExportArtifactFormat[] = ["pdf", "image", "figma"];
 const DESKTOP_EXPORT_ARTIFACT_IMAGE_FORMATS: readonly DesktopExportArtifactImageFormat[] = ["png", "jpeg"];
 
 function normalizeDesktopExportArtifactInput(input: unknown): DesktopExportArtifactInput {

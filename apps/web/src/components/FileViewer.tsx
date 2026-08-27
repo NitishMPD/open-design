@@ -177,6 +177,10 @@ import {
 import { fetchAppVersionInfo } from '../providers/registry';
 import { copyToClipboard } from '../lib/copy-to-clipboard';
 import { buildReactComponentSrcdoc } from '../runtime/react-component';
+import {
+  copyRenderedDomToFigma,
+  requestRenderedDomSnapshot,
+} from '../runtime/figma-export';
 import { shouldConsumeSlideNav } from '../runtime/slide-nav';
 import { findHtmlEntriesReferencing } from '../runtime/jsx-module-refs';
 import {
@@ -14977,6 +14981,38 @@ function HtmlViewer({
   };
   const openShareMenu = () => openUnifiedActionMenu('share', 'share_dropdown');
   const openDownloadMenu = () => openUnifiedActionMenu('export', 'download_dropdown');
+  const copyPreviewToFigma = async () => {
+    setExportToast({ message: 'Preparing editable Figma layers…', tone: 'loading' });
+    try {
+      const headers = new Headers(workspaceContext ? workspaceProjectHeaders(workspaceContext) : undefined);
+      headers.set('content-type', 'application/json');
+      const response = await fetch(`/api/projects/${encodeURIComponent(projectId)}/figma/copy`, {
+        method: 'POST',
+        headers,
+        body: JSON.stringify({ fileName: file.name, title: exportTitle, deck: isDeck }),
+      });
+      if (!response.ok && response.status !== 501) {
+        const body = await response.json().catch(() => null) as { error?: { message?: string }; message?: string } | null;
+        throw new Error(body?.error?.message ?? body?.message ?? 'Could not copy to Figma.');
+      }
+      // Browser-only deployments have no Electron clipboard exporter. They use
+      // the converter locally after the shared endpoint reports that desktop
+      // rendering is unavailable.
+      if (response.status === 501) {
+        const target = iframeRef.current?.contentWindow;
+        if (!target) throw new Error('The rendered preview is not ready.');
+        const snapshot = await requestRenderedDomSnapshot(target);
+        await copyRenderedDomToFigma(snapshot, { name: exportTitle });
+      }
+      setExportToast({ message: 'Copied — paste in Figma', tone: 'success' });
+    } catch (error) {
+      setExportToast({
+        message: error instanceof Error ? error.message : 'Could not copy to Figma.',
+        tone: 'error',
+      });
+      throw error;
+    }
+  };
   const captureExportImageSnapshot = useCallback(async (
     options?: { wholeDeck?: boolean; context?: HtmlVersionExportContext | null },
   ) => {
@@ -16898,6 +16934,22 @@ function HtmlViewer({
                     ) : null}
                     {unifiedActionTab === 'export' && rawCanDownload ? (
                       <div className="chrome-unified-panel">
+                  {isShareableArtifact ? (
+                    <button
+                      type="button"
+                      className="share-menu-item"
+                      role="menuitem"
+                      disabled={viewerOnly || streaming}
+                      title={viewerOnly ? viewerOnlyDisabledTitle : 'Copy editable layers to the clipboard'}
+                      onClick={() => {
+                        setDeployMenuOpen(false);
+                        void copyPreviewToFigma().catch(() => undefined);
+                      }}
+                    >
+                      <span className="share-menu-icon"><RemixIcon name="figma-line" size={15} /></span>
+                      <span>Copy to Figma</span>
+                    </button>
+                  ) : null}
                   <button
                     type="button"
                     className="share-menu-item"

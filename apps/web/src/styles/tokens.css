@@ -151,8 +151,8 @@
   --text: #ededed;
   --text-strong: #fafafa;
   --text-muted: #bdbdbd;
-  --text-soft: #848484;
-  --text-faint: #5c5c5c;
+  --text-soft: #a3a3a3;
+  --text-faint: #848484;
 
   --accent: #ededed;
   --accent-contrast: #202020;
@@ -179,6 +179,9 @@
   --red-border: color-mix(in srgb, #FF5E5E 34%, #5c5c5c);
   --amber: #FFC740;
   --amber-bg: color-mix(in srgb, #FFBA12 22%, #202020);
+
+  --selected: #fafafa;
+  --selected-soft: color-mix(in srgb, #fafafa 14%, transparent);
 
   --shadow-xs: 0 1px 0 rgba(0, 0, 0, 0.2);
   --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.3), 0 1px 3px rgba(0, 0, 0, 0.2);
@@ -212,8 +215,8 @@
     --text: #ededed;
     --text-strong: #fafafa;
     --text-muted: #bdbdbd;
-    --text-soft: #848484;
-    --text-faint: #5c5c5c;
+    --text-soft: #a3a3a3;
+    --text-faint: #848484;
 
     --accent: #ededed;
     --accent-contrast: #202020;
@@ -240,6 +243,9 @@
     --red-border: color-mix(in srgb, #FF5E5E 34%, #5c5c5c);
     --amber: #FFC740;
     --amber-bg: color-mix(in srgb, #FFBA12 22%, #202020);
+
+    --selected: #fafafa;
+    --selected-soft: color-mix(in srgb, #fafafa 14%, transparent);
 
     --shadow-xs: 0 1px 0 rgba(0, 0, 0, 0.2);
     --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.3), 0 1px 3px rgba(0, 0, 0, 0.2);

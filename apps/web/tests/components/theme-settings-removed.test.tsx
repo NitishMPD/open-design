@@ -60,7 +60,7 @@ beforeEach(() => {
   analyticsMocks.track.mockReset();
 });
 
-describe('Settings → General (theme setting removed)', () => {
+describe('Settings → General theme setting', () => {
   function renderGeneralSettings() {
     return render(
       <I18nProvider initial="en">
@@ -80,18 +80,18 @@ describe('Settings → General (theme setting removed)', () => {
     );
   }
 
-  it('renders no appearance group', () => {
+  it('renders an appearance group', () => {
     renderGeneralSettings();
 
-    expect(screen.queryByRole('group', { name: 'Appearance' })).toBeNull();
+    expect(screen.getByRole('group', { name: 'Light / Dark' })).toBeTruthy();
   });
 
-  it('renders no System / Light / Dark theme buttons', () => {
+  it('renders Light and Dark theme buttons', () => {
     renderGeneralSettings();
 
-    for (const label of THEME_CONTROL_LABELS) {
-      expect(screen.queryByRole('button', { name: label })).toBeNull();
-    }
+    expect(screen.getByRole('button', { name: 'Light' })).toBeTruthy();
+    expect(screen.getByRole('button', { name: 'Dark' })).toBeTruthy();
+    expect(screen.queryByRole('button', { name: 'System' })).toBeNull();
   });
 
   it('keeps the neighbouring General settings intact', () => {

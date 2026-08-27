@@ -118,6 +118,7 @@ import type {
   ApiProtocol,
   ApiProtocolConfig,
   AppConfig,
+  AppTheme,
   AppVersionInfo,
   ConnectionTestResponse,
   DesignSystemGenerationJob,
@@ -1549,6 +1550,7 @@ export function SettingsDialog({
   const previousInitialRef = useRef(initial);
   // Accent only — the theme is a constant now that the app ships light-only.
   const lastSavedAppearanceRef = useRef({
+    theme: initial.theme ?? 'light',
     accentColor: resolveAccentColor(initial.accentColor),
   });
 
@@ -1564,9 +1566,10 @@ export function SettingsDialog({
 
   useEffect(() => {
     lastSavedAppearanceRef.current = {
+      theme: initial.theme ?? 'light',
       accentColor: resolveAccentColor(initial.accentColor),
     };
-  }, [initial.accentColor]);
+  }, [initial.theme, initial.accentColor]);
 
   useEffect(() => {
     const previousInitial = previousInitialRef.current;
@@ -3318,6 +3321,7 @@ export function SettingsDialog({
             committedClearedByokProviderKeyRef.current = null;
           }
           lastSavedAppearanceRef.current = {
+            theme: persistedSnapshot.theme ?? 'light',
             accentColor: resolveAccentColor(persistedSnapshot.accentColor),
           };
           // If a newer edit landed while the request was in flight,
@@ -5935,6 +5939,13 @@ export function SettingsDialog({
                     <Icon name="chevron-down" size={14} />
                   </label>
                 </div>
+              </div>
+
+              <div className="settings-general-block">
+                <div className="settings-general-block-head">
+                  <h3>{t('brandDetail.themeLight')} / {t('brandDetail.themeDark')}</h3>
+                </div>
+                <AppearanceThemeControl cfg={cfg} setCfg={setCfg} />
               </div>
 
               <div className="settings-general-block">
@@ -8976,6 +8987,54 @@ function soundIdToTracking(
     default:
       return undefined;
   }
+}
+
+const APP_THEMES: Array<{
+  value: Extract<AppTheme, 'light' | 'dark'>;
+  labelKey: 'brandDetail.themeLight' | 'brandDetail.themeDark';
+  icon: 'sun' | 'moon';
+}> = [
+  { value: 'light', labelKey: 'brandDetail.themeLight', icon: 'sun' },
+  { value: 'dark', labelKey: 'brandDetail.themeDark', icon: 'moon' },
+];
+
+function AppearanceThemeControl({
+  cfg,
+  setCfg,
+}: {
+  cfg: AppConfig;
+  setCfg: Dispatch<SetStateAction<AppConfig>>;
+}) {
+  const { t } = useI18n();
+  const current = cfg.theme === 'dark' ? 'dark' : 'light';
+
+  useLayoutEffect(() => {
+    applyAppearanceToDocument({
+      theme: current,
+      accentColor: cfg.accentColor,
+    });
+  }, [current, cfg.accentColor]);
+
+  return (
+    <div
+      className="seg-control"
+      role="group"
+      aria-label={`${t('brandDetail.themeLight')} / ${t('brandDetail.themeDark')}`}
+      style={{ '--seg-cols': APP_THEMES.length } as CSSProperties}
+    >
+      {APP_THEMES.map(({ value, labelKey, icon }) => (
+        <Button
+          key={value}
+          className={`seg-btn${current === value ? ' active' : ''}`}
+          aria-pressed={current === value}
+          onClick={() => setCfg((existing) => ({ ...existing, theme: value }))}
+        >
+          <Icon name={icon} size={14} aria-hidden="true" />
+          <span className="seg-title">{t(labelKey)}</span>
+        </Button>
+      ))}
+    </div>
+  );
 }
 
 function NotificationsSection({

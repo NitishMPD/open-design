@@ -323,7 +323,7 @@ const SHARE_BOOLEAN_FLAGS = new Set([
 // top-of-file SUBCOMMAND_MAP dispatch during module evaluation; a `const`
 // further down would still be in TDZ when the handler reads it.
 const FIGMA_STRING_FLAGS = new Set([
-  'daemon-url', 'project', 'file', 'figma-url', 'notes', 'prompt', 'prompt-file',
+  'daemon-url', 'project', 'file', 'figma-url', 'notes', 'prompt', 'prompt-file', 'title',
 ]);
 const FIGMA_PROJECT_RESOURCE_STRING_FLAGS = new Set([
   ...FIGMA_STRING_FLAGS,
@@ -331,7 +331,7 @@ const FIGMA_PROJECT_RESOURCE_STRING_FLAGS = new Set([
   'workspace-member',
 ]);
 const FIGMA_BOOLEAN_FLAGS = new Set([
-  'help', 'h', 'json', 'build',
+  'help', 'h', 'json', 'build', 'deck',
 ]);
 // `od brand …` mirrors the Brands library + New Brand modal. Same surface,
 // same /api/brands store. The CLI form is the embeddability contract: an
@@ -6308,6 +6308,7 @@ function printFigmaUsage() {
   od figma import --project <id> --file <path.fig> [--notes "<text>"]
                   [--build] [--prompt "<text>" | --prompt-file <path|->] [--json]
   od figma import --project <id> --figma-url <url> [--notes "<text>"] [--json]
+  od figma copy --project <id> --file <artifact.html> [--title "<name>"] [--deck] [--json]
 
 Imports a Figma design into a project. A .fig file is decoded fully offline
 (no Figma account); a Figma URL runs through the od-figma-migration scenario
@@ -6334,7 +6335,7 @@ async function runFigma(args) {
     printFigmaUsage();
     process.exit(sub ? 0 : 2);
   }
-  if (sub !== 'import') {
+  if (sub !== 'import' && sub !== 'copy') {
     console.error(`unknown subcommand: od figma ${sub}`);
     printFigmaUsage();
     process.exit(2);
@@ -6351,6 +6352,29 @@ async function runFigma(args) {
   if (!flags.project) {
     console.error('--project <id> is required');
     process.exit(2);
+  }
+  if (sub === 'copy') {
+    if (!flags.file) {
+      console.error('--file <artifact.html> is required');
+      process.exit(2);
+    }
+    const response = await fetch(`${base}/api/projects/${encodeURIComponent(flags.project)}/figma/copy`, {
+      method: 'POST',
+      headers: { 'content-type': 'application/json', ...workspaceHeaders },
+      body: JSON.stringify({
+        fileName: flags.file,
+        ...(flags.title ? { title: flags.title } : {}),
+        ...(flags.deck ? { deck: true } : {}),
+      }),
+    });
+    const data = await response.json().catch(() => ({}));
+    if (!response.ok) {
+      console.error(`Copy to Figma failed: ${response.status} ${JSON.stringify(data)}`);
+      process.exit(1);
+    }
+    if (flags.json) return process.stdout.write(JSON.stringify(data, null, 2) + '\n');
+    console.log('[figma] copied editable layers — paste in Figma');
+    return;
   }
   const file = flags.file;
   const figmaUrl = flags['figma-url'];

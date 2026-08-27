@@ -64,3 +64,17 @@ export interface FigmaImportRequest {
   /** Optional design brief / migration notes folded into `suggestedPrompt`. */
   notes?: string;
 }
+
+/** Request shared by the Download menu and `od figma copy`. */
+export interface FigmaCopyRequest {
+  fileName: string;
+  title?: string;
+  deck?: boolean;
+  width?: number;
+  height?: number;
+}
+
+export interface FigmaCopyResult {
+  ok: boolean;
+  copied: boolean;
+}

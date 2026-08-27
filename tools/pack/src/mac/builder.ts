@@ -3,6 +3,7 @@ import { dirname, join } from "node:path";
 
 import type { ToolPackConfig } from "../config/index.js";
 import { domToPptxBundleResource } from "../dom-to-pptx-resource.js";
+import { webToFigmaBundleResource } from "../web-to-figma-resource.js";
 import {
   assertNodePtyRuntime,
   resolveNodePtyRuntimeArch,
@@ -124,6 +125,7 @@ export async function runElectronBuilder(
       // Vendored dom-to-pptx browser bundle for editable PPTX export. The desktop
       // main reads it from process.resourcesPath at runtime.
       domToPptxBundleResource(config),
+      webToFigmaBundleResource(config),
     ],
     files: [...ELECTRON_BUILDER_FILE_PATTERNS],
     mac: {

@@ -880,7 +880,7 @@ export function registerProjectExportRoutes(app: Express, ctx: RegisterProjectEx
   // daemon yet, so a web-only deployment gets a clear 501.
   async function handleScreenshotExport(
     res: Response,
-    format: 'pptx' | 'pdf' | 'image',
+    format: 'pptx' | 'pdf' | 'image' | 'figma',
     projectId: string,
     request: ScreenshotExportRequest,
   ) {
@@ -904,6 +904,40 @@ export function registerProjectExportRoutes(app: Express, ctx: RegisterProjectEx
       }
       if (height != null && (typeof height !== 'number' || !Number.isFinite(height) || height <= 0)) {
         return sendApiError(res, 400, 'BAD_REQUEST', 'height must be a positive number');
+      }
+      if (format === 'figma') {
+        if (typeof desktopArtifactExporter !== 'function') {
+          return sendApiError(res, 501, 'NOT_IMPLEMENTED', 'Copy to Figma requires the desktop renderer');
+        }
+        renderPreviewScope = ctx.projectPreviewScopes.mint(
+          projectId,
+          authority.previewWorkspace,
+          { ttlMs: SCREENSHOT_RENDER_PREVIEW_SCOPE_TTL_MS },
+        );
+        const input = await buildDesktopArtifactExportInput({
+          baseHref: scopedProjectPreviewBaseHref(projectId, fileName, renderPreviewScope),
+          daemonUrl: daemonUrlRef.current,
+          fileName,
+          format,
+          metadata,
+          projectId,
+          projectsRoot: PROJECTS_DIR,
+          ...(sourceHtml !== undefined ? { sourceHtml } : {}),
+          ...(typeof title === 'string' ? { title } : {}),
+          ...(typeof body?.deck === 'boolean' ? { deck: body.deck } : {}),
+          ...(typeof width === 'number' ? { width } : {}),
+          ...(typeof height === 'number' ? { height } : {}),
+        });
+        try {
+          const result = await desktopArtifactExporter(input);
+          if (!result.ok || result.copied !== true) {
+            return sendApiError(res, 502, 'UPSTREAM_UNAVAILABLE', result.error || 'Figma clipboard copy failed');
+          }
+          return res.json({ ok: true, copied: true });
+        } finally {
+          ctx.projectPreviewScopes.revoke(renderPreviewScope);
+          renderPreviewScope = null;
+        }
       }
       if (typeof desktopSlideRenderer !== 'function') {
         if (format === 'image' && typeof desktopArtifactExporter === 'function') {
@@ -1447,6 +1481,15 @@ export function registerProjectExportRoutes(app: Express, ctx: RegisterProjectEx
     });
     if (!authority) return;
     await handleStandaloneHtmlExport(res, req.params.id, req.body);
+  });
+
+  app.post('/api/projects/:id/figma/copy', async (req, res) => {
+    const authority = await authorizeExportRead(req, res, {
+      deriveWorkspaceFromProject: true,
+      toolEndpoint: PROJECT_EXPORT_TOOL_ENDPOINT,
+    });
+    if (!authority) return;
+    await handleScreenshotExport(res, 'figma', req.params.id, { authority, body: req.body });
   });
 
   // Generic programmatic export (HTML / PDF / image / PPTX) for callers using

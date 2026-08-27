@@ -1411,6 +1411,20 @@ const URL_PREVIEW_SNAPSHOT_BRIDGE = `<script data-od-url-snapshot-bridge>
   }
   window.addEventListener('message', function(ev){
     var data = ev && ev.data;
+    if (data && data.type === 'od:figma-dom' && data.id){
+      try {
+        var clone = document.documentElement.cloneNode(true);
+        inlineSnapshotStyles(document.documentElement, clone);
+        var scripts = clone.querySelectorAll('script, meta[http-equiv="refresh" i]');
+        for (var i = 0; i < scripts.length; i++) scripts[i].remove();
+        var width = Math.max(1, window.innerWidth || document.documentElement.clientWidth || 1);
+        var height = Math.max(1, document.documentElement.scrollHeight || (document.body && document.body.scrollHeight) || window.innerHeight || 1);
+        window.parent.postMessage({ type: 'od:figma-dom:result', id: String(data.id), html: clone.outerHTML, baseHref: document.baseURI, width: width, height: height }, '*');
+      } catch (err) {
+        window.parent.postMessage({ type: 'od:figma-dom:result', id: String(data.id), error: String(err && err.message || err) }, '*');
+      }
+      return;
+    }
     if (!data || data.type !== 'od:snapshot' || !data.id) return;
     waitForImages().then(function(){ renderSnapshot(String(data.id)); });
   });

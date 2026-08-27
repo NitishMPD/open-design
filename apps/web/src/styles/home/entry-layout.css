@@ -148,6 +148,14 @@
     linear-gradient(#000 0 0);
   mask-composite: exclude;
 }
+[data-theme='dark'] .entry-nav-rail__panel {
+  --rail-surface: rgba(53, 53, 53, 0.72);
+}
+@media (prefers-color-scheme: dark) {
+  html:not([data-theme]) .entry-nav-rail__panel {
+    --rail-surface: rgba(53, 53, 53, 0.72);
+  }
+}
 /* Material spec fallbacks: drop the translucency to a solid per-theme surface
    when the user reduces transparency or the browser lacks backdrop-filter. */
 @media (prefers-reduced-transparency: reduce) {
@@ -6759,8 +6767,8 @@ button.entry-nav-rail__menu-credits-row:active:not(:disabled) {
 }
 
 [data-testid="design-systems-tab"] > aside div:has(> [data-testid^="design-system-card-"][aria-pressed="true"]) {
-  border-color: #dbdbdb;
-  background: #ffffff;
+  border-color: var(--border-strong);
+  background: var(--bg-elevated);
 }
 
 [data-testid="design-systems-tab"] > aside div:has(> [data-testid^="design-system-card-"]):hover > [data-testid^="design-system-card-"],

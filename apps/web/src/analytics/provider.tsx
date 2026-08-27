@@ -27,6 +27,7 @@ import {
   setAnalyticsUserId,
   setConfigureGlobals,
 } from './client';
+import { mergeFetchHeaders } from './fetch-headers';
 import { APP_VERSION_PLACEHOLDER } from './app-version';
 import { patchExceptionTrackingAppVersion } from './error-tracking';
 import type { AnalyticsConfigureGlobals } from '@open-design/contracts/analytics';
@@ -234,11 +235,10 @@ export function AnalyticsProvider({ children }: { children: ReactNode }) {
     window.fetch = async (input, init) => {
       const url = typeof input === 'string' ? input : input instanceof URL ? input.href : input.url;
       if (!isSameOriginApiCall(url)) return original(input, init);
-      const merged: HeadersInit = {
-        ...baseHeaders,
-        [ANALYTICS_HEADER_LOCALE]: locale,
-        ...(init?.headers ?? {}),
-      };
+      const merged = mergeFetchHeaders(
+        { ...baseHeaders, [ANALYTICS_HEADER_LOCALE]: locale },
+        init?.headers,
+      );
       return original(input, { ...(init ?? {}), headers: merged });
     };
     return () => {
@@ -294,10 +294,10 @@ export function AnalyticsProvider({ children }: { children: ReactNode }) {
                   ? input.href
                   : input.url;
             if (!isSameOriginApiCall(url)) return baseFetch(input, init);
-            const merged: HeadersInit = {
-              [ANALYTICS_HEADER_REQUEST_ID]: requestId,
-              ...(init?.headers ?? {}),
-            };
+            const merged = mergeFetchHeaders(
+              { [ANALYTICS_HEADER_REQUEST_ID]: requestId },
+              init?.headers,
+            );
             return baseFetch(input, { ...(init ?? {}), headers: merged });
           };
           // Single-shot: restore after next microtask so only the originating

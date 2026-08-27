@@ -619,14 +619,14 @@
   color: #fafafa;
 }
 .modal-confirm .row button.primary:hover {
-  background: #353535;
-  border-color: #353535;
-  color: #fafafa;
+  background: var(--text);
+  border-color: var(--text);
+  color: var(--bg);
 }
 .modal-confirm .row button.primary:active {
-  background: #494949;
-  border-color: #494949;
-  color: #fafafa;
+  background: var(--text-strong);
+  border-color: var(--text-strong);
+  color: var(--bg);
 }
 .modal-confirm .row button.primary:disabled,
 .modal-confirm .row button.primary:disabled:hover {
@@ -2942,8 +2942,9 @@
 }
 .orbit-config-gate-action:hover {
   transform: translateY(-1px);
-  background: #353535;
-  border-color: #353535;
+  background: var(--text);
+  border-color: var(--text);
+  color: var(--bg);
 }
 .orbit-config-gate-action:focus-visible {
   outline: var(--stroke-thin, 1px) solid var(--blue);

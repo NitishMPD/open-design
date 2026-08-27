@@ -15,6 +15,7 @@ import { dirname, join } from "node:path";
 import process from "node:process";
 
 import { domToPptxBundleResource } from "@/dom-to-pptx-resource.js";
+import { webToFigmaBundleResource } from "@/web-to-figma-resource.js";
 import { copyBundledResourceTrees } from "@/resources/index.js";
 import { copyOptionalVelaCliBinary, resolveOptionalVelaCliBinary } from "@/vela-cli.js";
 
@@ -159,6 +160,29 @@ describe("domToPptxBundleResource", () => {
       expect(domToPptxBundleResource({ workspaceRoot })).toEqual({
         from: join(workspaceRoot, "apps", "desktop", "vendor", "dom-to-pptx", "dom-to-pptx.bundle.js.gz"),
         to: "dom-to-pptx.bundle.js.gz",
+      });
+    } finally {
+      process.chdir(previousCwd);
+      await rm(root, { force: true, recursive: true });
+    }
+  });
+});
+
+describe("webToFigmaBundleResource", () => {
+  it("derives the vendored bundle path from the workspace root, not the caller cwd", async () => {
+    const root = await mkdtemp(join(tmpdir(), "open-design-tools-pack-figma-resource-"));
+    const workspaceRoot = join(root, "workspace");
+    const callerCwd = join(root, "caller");
+    const previousCwd = process.cwd();
+
+    try {
+      await mkdir(workspaceRoot, { recursive: true });
+      await mkdir(callerCwd, { recursive: true });
+      process.chdir(callerCwd);
+
+      expect(webToFigmaBundleResource({ workspaceRoot })).toEqual({
+        from: join(workspaceRoot, "apps", "desktop", "vendor", "web-to-figma", "web-to-figma.bundle.js.gz"),
+        to: "web-to-figma.bundle.js.gz",
       });
     } finally {
       process.chdir(previousCwd);
